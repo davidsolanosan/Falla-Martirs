@@ -3,16 +3,24 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, signInWithEmailA
 import { getFirestore } from 'firebase/firestore';
 
 // Configuración de Firebase desde variables de entorno
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+const getEnvVar = (key: string) => {
+  const env = (import.meta as any).env || {};
+  console.log(`🔍 Variable ${key}:`, env[key]);
+  return env[key];
 };
+
+const firebaseConfig = {
+  apiKey: getEnvVar('VITE_FIREBASE_API_KEY'),
+  authDomain: getEnvVar('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: getEnvVar('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: getEnvVar('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getEnvVar('VITE_FIREBASE_APP_ID'),
+  measurementId: getEnvVar('VITE_FIREBASE_MEASUREMENT_ID') || "",
+  firestoreDatabaseId: getEnvVar('VITE_FIREBASE_PROJECT_ID')
+};
+
+console.log('🔍 Config Firebase:', firebaseConfig);
 
 const app = initializeApp(firebaseConfig);
 
