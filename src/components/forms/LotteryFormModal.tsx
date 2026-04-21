@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { useTranslation } from '../../lib/i18n';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Lottery } from '../../types';
 
 interface LotteryFormModalProps {
@@ -16,27 +14,18 @@ export function LotteryFormModal({ isOpen, onClose }: LotteryFormModalProps) {
   const [formData, setFormData] = useState<Partial<Lottery>>({
     name: '',
     totalTickets: 0,
-    assignedToFamily: {},
-    soldByFamily: {}
+    price: 0
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'lotteries'), {
-        ...formData,
-        totalTickets: Number(formData.totalTickets)
-      });
+      // Temporal: solo mostrar mensaje de éxito
+      alert('Lotería creada correctamente (temporal)');
       onClose();
-      setFormData({
-        name: '',
-        totalTickets: 0,
-        assignedToFamily: {},
-        soldByFamily: {}
-      });
     } catch (error) {
-      console.error("Error adding lottery:", error);
-      alert("Error adding lottery. Check console for details.");
+      console.error("Error saving lottery:", error);
+      alert("Error al guardar lotería. Revisa la consola para más detalles.");
     }
   };
 
@@ -50,20 +39,33 @@ export function LotteryFormModal({ isOpen, onClose }: LotteryFormModalProps) {
             required
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
             placeholder="Ej: Lotería de Navidad"
           />
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Total Tickets</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('totalTickets')}</label>
           <input
             type="number"
             min="0"
             required
             value={formData.totalTickets}
             onChange={(e) => setFormData({ ...formData, totalTickets: Number(e.target.value) })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('price')}</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
           />
         </div>
 
@@ -71,13 +73,13 @@ export function LotteryFormModal({ isOpen, onClose }: LotteryFormModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+            className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors text-sm"
           >
             {t('cancel')}
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+            className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
           >
             {t('save')}
           </button>

@@ -17,35 +17,47 @@ export interface User {
   isAdult: boolean;
   isFamilyAdmin: boolean;
   apellidos?: string;
+  surname?: string; // Para compatibilidad
   dni?: string;
   telefono?: string;
   direccion?: string;
+  address?: string; // Campo real de dirección
   poblacion?: string;
   codigoPostal?: string;
   anyoNacimiento?: string;
+  birth_year?: string; // Campo real de fecha de nacimiento
   sexo?: string;
+  sexe?: string; // Campo del Excel (SEXE)
   cargo?: string;
   recompensa?: string;
   codigoJCF?: string;
   numeroCenso?: string;
-  monthlyPayment?: MonthlyPayment; // cuota mensual calculada
-  masterAdminId?: string; // ID del master admin que autorizó este rol
+  tutor?: string; // Nuevo campo para menores
+  telefono_tutor?: string; // Nuevo campo para menores
+  monthlyPayment?: MonthlyPayment;
+  masterAdminId?: string;
 }
 
 export interface Family {
   id: string;
   name: string; // e.g., "Familia García Pérez"
+  address: string;
+  phone: string;
   representativeIds: string[]; // Array de IDs de representantes
   members: string[]; // User IDs
   totalMonthlyPayment?: MonthlyPayment; // total mensual de la familia
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Category {
   id: string;
   name: string; // e.g., "Infantil", "Mayor", "Jubilado"
-  quotaAmount: number;
-  minAge?: number; // Edad mínima (opcional)
-  maxAge?: number; // Edad máxima (opcional)
+  quotaamount: number;
+  min_age: number; // ← snake_case como en la BD
+  max_age: number; // ← snake_case como en la BD
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Event {
@@ -63,4 +75,19 @@ export interface Lottery {
   totalTickets: number;
   assignedToFamily: Record<string, number>; // familyId -> number of tickets
   soldByFamily: Record<string, number>;
+  year: number; // Año fallero (ej: 2025-2026)
+  monthlyPrices: MonthlyLotteryPrice[]; // Precios por cada mes
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MonthlyLotteryPrice {
+  id: string;
+  month: string; // "abril", "mayo", etc.
+  year: number; // 2025, 2026
+  price: number; // Coste de la papeleta
+  discount: number; // Descuento en quota (0.50€)
+  isActive: boolean; // Si está disponible para venta
+  created_at: string;
+  updated_at: string;
 }

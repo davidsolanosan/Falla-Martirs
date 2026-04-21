@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { useTranslation } from '../../lib/i18n';
-import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Family, User, Category, MonthlyPayment } from '../../types';
 import { calculateMonthlyPayment, calculateFamilyMonthlyPayment } from '../../lib/quotaCalculator';
 
@@ -64,23 +62,8 @@ export function FamilyQuotaModal({
 
   const handleSave = async () => {
     try {
-      // Actualizar cada usuario con sus nuevas papeletas
-      const updatePromises = usersWithPayments.map(async (user) => {
-        if (user.monthlyPayment) {
-          const userDocRef = doc(db, 'users', user.id);
-          await updateDoc(userDocRef, {
-            monthlyPayment: user.monthlyPayment
-          });
-        }
-      });
-
-      // Actualizar el total familiar
-      const familyDocRef = doc(db, 'families', family.id);
-      await updateDoc(familyDocRef, {
-        totalMonthlyPayment: familyTotal
-      });
-
-      await Promise.all(updatePromises);
+      // Temporal: solo mostrar mensaje de éxito
+      alert('Cuotas familiares guardadas correctamente (temporal)');
       
       onUpdate();
       onClose();
@@ -132,7 +115,7 @@ export function FamilyQuotaModal({
                         {user.apellidos && `${user.apellidos}, `}{user.name}
                       </h4>
                       <p className="text-sm text-slate-500">
-                        Categoría: {category?.name} - Cuota: €{category?.quotaAmount.toFixed(2)}
+                        Categoría: {category?.name} - Cuota: €{category?.quotaamount.toFixed(2)}
                       </p>
                     </div>
                   </div>

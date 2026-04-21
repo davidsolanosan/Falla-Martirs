@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { useData } from '../lib/DataContext';
+import { useSupabase } from '../lib/SupabaseContext';
 import { useTranslation } from '../lib/i18n';
-import { Settings, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Settings, Plus, Edit2, Trash2, Key, Shield } from 'lucide-react';
 import { CategoryFormModal } from '../components/forms/CategoryFormModal';
+import { PasswordGenerator } from '../components/admin/PasswordGenerator';
 import { Category } from '../types';
-import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { Link } from 'react-router-dom';
 
 export default function Configuracion() {
-  const { categories } = useData();
+  const { categories, deleteCategory } = useSupabase();
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'categorias' | 'general' | 'roles'>('general');
+  const [activeTab, setActiveTab] = useState<'categorias' | 'general' | 'roles' | 'autenticacion'>('general');
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
 
@@ -22,7 +22,7 @@ export default function Configuracion() {
   const handleDeleteCategory = async (categoryId: string) => {
     if (window.confirm(t('deleteCategory') + '?')) {
       try {
-        await deleteDoc(doc(db, 'categories', categoryId));
+        await deleteCategory(categoryId);
       } catch (error) {
         console.error("Error deleting category:", error);
         alert("Error deleting category. Check console for details.");
@@ -41,9 +41,9 @@ export default function Configuracion() {
         <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{t('navSettings')}</h2>
         <button 
           onClick={handleOpenCategoryModal}
-          className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
+          className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
         >
-          <Plus className="w-5 h-5 mr-2" />
+          <Plus className="w-4 h-4 mr-2" />
           {t('addCategory')}
         </button>
       </div>
@@ -66,6 +66,15 @@ export default function Configuracion() {
           {t('quotaCategories')}
         </button>
         <button
+          onClick={() => setActiveTab('autenticacion')}
+          className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'autenticacion' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <Key className="w-4 h-4 mr-1" />
+          Autenticación
+        </button>
+        <button
           onClick={() => setActiveTab('roles')}
           className={`flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
             activeTab === 'roles' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
@@ -73,6 +82,13 @@ export default function Configuracion() {
         >
           {t('roles')}
         </button>
+        <Link
+          to="/configuracion/permisos"
+          className="flex-1 flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors bg-purple-50 text-purple-700 hover:bg-purple-100"
+        >
+          <Shield className="w-4 h-4 mr-1" />
+          Permisos
+        </Link>
       </div>
 
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
@@ -90,10 +106,10 @@ export default function Configuracion() {
               <div key={cat.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex items-center justify-between">
                 <div className="flex-1">
                   <h4 className="text-base font-bold text-slate-800">{cat.name}</h4>
-                  <p className="text-sm text-slate-500">{t('monthlyQuota')}: €{cat.quotaAmount.toFixed(2)}</p>
-                  {(cat.minAge !== undefined || cat.maxAge !== undefined) && (
+                  <p className="text-sm text-slate-500">{t('monthlyQuota')}: €{cat.quotaamount ? cat.quotaamount.toFixed(2) : '0.00'}</p>
+                  {(cat.min_age !== undefined || cat.max_age !== undefined) && (
                     <p className="text-sm text-slate-500">
-                      {t('ageRange')}: {cat.minAge !== undefined ? `${cat.minAge} años` : '0 años'} - {cat.maxAge !== undefined ? `${cat.maxAge} años` : '∞'}
+                      {t('ageRange')}: {cat.min_age !== undefined ? `${cat.min_age} anys` : '0 anys'} - {cat.max_age !== undefined ? `${cat.max_age} anys` : '∞'}
                     </p>
                   )}
                   <p className="text-xs text-slate-400 mt-1">{t('categoryDescription')}</p>
@@ -123,6 +139,10 @@ export default function Configuracion() {
                 <p className="text-sm">{t('createCategoriesDescription')}</p>
               </div>
             )}
+          </div>
+        ) : activeTab === 'autenticacion' ? (
+          <div className="p-6">
+            <PasswordGenerator />
           </div>
         ) : (
           <div className="p-6 text-center text-slate-500">

@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { useData } from '../lib/DataContext';
+import { useSupabase } from '../lib/SupabaseContext';
 import { useTranslation } from '../lib/i18n';
 import { CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
 import { PaymentFormModal } from '../components/forms/PaymentFormModal';
 
 export default function Cuotas() {
-  const { families, users, categories, currentUser } = useData();
+  const { families, users, categories, user, quotas } = useSupabase();
   const { t } = useTranslation();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'directiva';
+  const isAdmin = user.role === 'admin' || user.role === 'master_admin';
   
-  const displayFamilies = isAdmin ? families : families.filter(f => f.id === currentUser.familyId);
+  const displayFamilies = isAdmin ? families : families.filter(f => f.id === user.family_id);
 
   return (
     <div className="space-y-6">
@@ -19,9 +19,9 @@ export default function Cuotas() {
         {isAdmin && (
           <button 
             onClick={() => setIsPaymentModalOpen(true)}
-            className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
+            className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
           >
-            <CreditCard className="w-5 h-5 mr-2" />
+            <CreditCard className="w-4 h-4 mr-2" />
             {t('registerPayment')}
           </button>
         )}
@@ -31,15 +31,15 @@ export default function Cuotas() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <p className="text-sm font-medium text-slate-500 mb-1">{t('totalCollected')}</p>
-          <p className="text-3xl font-bold text-emerald-600">€2,450</p>
+          <p className="text-3xl font-bold text-slate-600">€2,450</p>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <p className="text-sm font-medium text-slate-500 mb-1">{t('pending')}</p>
-          <p className="text-3xl font-bold text-amber-500">€450</p>
+          <p className="text-3xl font-bold text-slate-500">€450</p>
         </div>
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <p className="text-sm font-medium text-slate-500 mb-1">{t('familiesUpToDate')}</p>
-          <p className="text-3xl font-bold text-indigo-600">45 / 50</p>
+          <p className="text-3xl font-bold text-slate-700">45 / 50</p>
         </div>
       </div>
       )}
@@ -56,7 +56,7 @@ export default function Cuotas() {
               const user = users.find(u => u.id === memberId);
               if (user) {
                 const cat = categories.find(c => c.id === user.categoryId);
-                if (cat) totalQuota += cat.quotaAmount;
+                if (cat) totalQuota += cat.quotaamount;
               }
             });
 
@@ -82,7 +82,7 @@ export default function Cuotas() {
                     </span>
                   )}
                   {isAdmin && (
-                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-4 py-2 rounded-lg transition-colors">
+                    <button className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-4 py-2 rounded-xl transition-all">
                       {t('viewDetail')}
                     </button>
                   )}

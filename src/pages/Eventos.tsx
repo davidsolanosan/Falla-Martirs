@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useData } from '../lib/DataContext';
+import { useSupabase } from '../lib/SupabaseContext';
 import { useTranslation } from '../lib/i18n';
 import { CalendarDays, Plus, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
@@ -7,12 +7,34 @@ import { es, ca } from 'date-fns/locale';
 import { EventFormModal } from '../components/forms/EventFormModal';
 
 export default function Eventos() {
-  const { events, currentUser } = useData();
+  const { user } = useSupabase();
   const { t, language } = useTranslation();
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'directiva';
+  const isAdmin = user.role === 'admin' || user.role === 'master_admin';
   
   const dateLocale = language === 'va' ? ca : es;
+  
+  // Datos de ejemplo para eventos (mientras implementamos la tabla events)
+  const events = [
+    {
+      id: '1',
+      title: 'Cena de Fallas',
+      description: 'Cena tradicional para celebrar las fallas',
+      date: '2024-03-15T20:00:00',
+      price: 25,
+      location: 'Restaurante El Rincón',
+      attendees: ['user1', 'user2', 'user3', 'user4']
+    },
+    {
+      id: '2', 
+      title: 'Desfile Infantil',
+      description: 'Desfile de los más pequeños de la falla',
+      date: '2024-03-20T10:00:00',
+      price: 0,
+      location: 'Plaza Mayor',
+      attendees: ['user5', 'user6']
+    }
+  ];
 
   return (
     <div className="space-y-6">
@@ -21,9 +43,9 @@ export default function Eventos() {
         {isAdmin && (
           <button 
             onClick={() => setIsEventModalOpen(true)}
-            className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
+            className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
           >
-            <Plus className="w-5 h-5 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             {t('createEvent')}
           </button>
         )}
@@ -72,21 +94,21 @@ export default function Eventos() {
                     </div>
                   </div>
                   {isAdmin ? (
-                    <button className="text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors">
+                    <button className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-4 py-2 rounded-xl transition-all">
                       {t('manageEvent')}
                     </button>
-                  ) : currentUser.isFamilyAdmin ? (
-                    <button className="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-colors">
+                  ) : user.isFamilyAdmin ? (
+                    <button className="text-sm font-medium text-white bg-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)] px-4 py-2 rounded-xl transition-all">
                       {t('join')}
                     </button>
                   ) : (
                     <div className="group relative flex items-center">
-                      <button disabled className="text-sm font-medium text-slate-400 bg-slate-100 px-4 py-2 rounded-xl cursor-not-allowed">
+                      <button disabled className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] px-4 py-2 rounded-xl cursor-not-allowed opacity-75">
                         {t('join')}
                       </button>
-                      <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-slate-800 text-white text-xs rounded-lg text-center z-10 shadow-lg hidden group-hover:block">
+                      <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-[rgb(48,80,105)] text-white text-xs rounded-xl text-center z-10 shadow-lg hidden group-hover:block">
                         {t('onlyFamilyAdmins')}
-                        <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-800"></div>
+                        <div className="absolute top-full right-4 border-4 border-transparent border-t-[rgb(48,80,105)]"></div>
                       </div>
                     </div>
                   )}

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
+import { useSupabase } from '../../lib/SupabaseContext';
 import { useTranslation } from '../../lib/i18n';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import { Event } from '../../types';
 
 interface EventFormModalProps {
@@ -24,11 +23,9 @@ export function EventFormModal({ isOpen, onClose }: EventFormModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await addDoc(collection(db, 'events'), {
-        ...formData,
-        date: new Date(formData.date!).toISOString(),
-        price: Number(formData.price)
-      });
+      // Event creation not implemented yet in SupabaseContext
+      // For now, just show a message
+      alert('Creación de eventos no implementada aún en Supabase');
       onClose();
       setFormData({
         title: '',
@@ -38,8 +35,8 @@ export function EventFormModal({ isOpen, onClose }: EventFormModalProps) {
         attendees: []
       });
     } catch (error) {
-      console.error("Error adding event:", error);
-      alert("Error adding event. Check console for details.");
+      console.error("Error saving event:", error);
+      alert("Error saving event. Check console for details.");
     }
   };
 

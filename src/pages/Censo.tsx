@@ -1,486 +1,537 @@
 import React, { useState, useMemo } from 'react';
-import { useData } from '../lib/DataContext';
 import { useTranslation } from '../lib/i18n';
-import { Search, Plus, User, Users, Upload, Edit, UserCircle, Calculator } from 'lucide-react';
+import { useSupabase } from '../lib/SupabaseContext';
+import { useAuth } from '../context/AuthContext';
 import { UserFormModal } from '../components/forms/UserFormModal';
 import { FamilyFormModal } from '../components/forms/FamilyFormModal';
 import { FamilyQuotaModal } from '../components/forms/FamilyQuotaModal';
 import { ImportCensusModal } from '../components/admin/ImportCensusModal';
 import { RoleManagement } from '../components/admin/RoleManagement';
 import { MasterAdminInit } from '../components/admin/MasterAdminInit';
-import { Family, User as UserType, Category } from '../types';
-
-// Función para calcular la categoría automática según la edad (fuera del componente para evitar cache)
-const getAutoCategory = (birthYear: string | undefined, categories: Category[], currentYear: number): Category | undefined => {
-  if (!birthYear) return undefined;
-  
-  // Intentar parsear el año de nacimiento
-  let year: number;
-  try {
-    // Si es un año completo (4 dígitos)
-    if (birthYear.length === 4) {
-      year = parseInt(birthYear);
-    }
-    // Si es una fecha completa (DD-MM-YYYY o DD/MM/YYYY)
-    else if (birthYear.includes('-')) {
-      const parts = birthYear.split('-');
-      year = parseInt(parts[parts.length - 1]); // Tomar el último elemento como año
-    }
-    // Si es una fecha completa con / (DD/MM/YYYY)
-    else if (birthYear.includes('/')) {
-      const parts = birthYear.split('/');
-      year = parseInt(parts[parts.length - 1]); // Tomar el último elemento como año
-    }
-    // Si es otro formato, intentar parsear directamente
-    else {
-      year = parseInt(birthYear);
-    }
-    
-    if (isNaN(year)) return undefined;
-  } catch (error) {
-    console.error('Error parsing birth year:', birthYear, error);
-    return undefined;
-  }
-  
-  const age = currentYear - year;
-  
-  const matchingCategory = categories
-    .filter(cat => {
-      // Si no tiene rangos definidos, no se considera para auto-asignación
-      if (cat.minAge === undefined && cat.maxAge === undefined) return false;
-      
-      const minMatch = cat.minAge === undefined || age >= cat.minAge;
-      const maxMatch = cat.maxAge === undefined || age <= cat.maxAge;
-      
-      return minMatch && maxMatch;
-    })
-    .sort((a, b) => {
-      // Priorizar categorías con rangos más específicos
-      // 1. Categorías con ambos rangos definidos
-      const aHasBoth = a.minAge !== undefined && a.maxAge !== undefined;
-      const bHasBoth = b.minAge !== undefined && b.maxAge !== undefined;
-      
-      if (aHasBoth && !bHasBoth) return -1;
-      if (!aHasBoth && bHasBoth) return 1;
-      
-      // 2. Si ambas tienen ambos rangos, priorizar el más pequeño
-      if (aHasBoth && bHasBoth) {
-        const aRange = (a.maxAge || 0) - (a.minAge || 0);
-        const bRange = (b.maxAge || 0) - (b.minAge || 0);
-        return aRange - bRange;
-      }
-      
-      // 3. Categorías con un solo rango (priorizar las más específicas)
-      const aHasMin = a.minAge !== undefined;
-      const bHasMin = b.minAge !== undefined;
-      if (aHasMin && !bHasMin) return -1;
-      if (!aHasMin && bHasMin) return 1;
-      
-      const aHasMax = a.maxAge !== undefined;
-      const bHasMax = b.maxAge !== undefined;
-      if (aHasMax && !bHasMax) return -1;
-      if (!aHasMax && bHasMax) return 1;
-      
-      return 0;
-    })[0];
-  
-  return matchingCategory;
-};
+import { FamilyManagementModal } from '../components/forms/FamilyManagementModal';
+import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash } from 'lucide-react';
 
 export default function Censo() {
-  const { users, families, categories, currentUser } = useData();
+  const { families, categories, users } = useSupabase(); // Datos de Supabase
+  const { user } = useAuth(); // Usuario de AuthContext
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'usuarios' | 'familias'>('usuarios');
   const [searchTerm, setSearchTerm] = useState('');
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isFamilyModalOpen, setIsFamilyModalOpen] = useState(false);
-  const [isQuotaModalOpen, setIsQuotaModalOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [userToEdit, setUserToEdit] = useState<UserType | null>(null);
-  const [familyToEdit, setFamilyToEdit] = useState<Family | null>(null);
-  const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
+  const [isFamilyManagementOpen, setIsFamilyManagementOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [familyToManage, setFamilyToManage] = useState<any>(null);
+  const [userToEdit, setUserToEdit] = useState<any>(null);
+  const [familyToEdit, setFamilyToEdit] = useState<any>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [deleteConfirm, setDeleteConfirm] = useState<{type: 'user' | 'family', id: string, name: string} | null>(null);
 
-  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'directiva';
+  const isAdmin = user ? (user.role === 'admin' || user.role === 'master_admin') : false;
 
-  const currentYear = new Date().getFullYear();
+  const getAutoCategory = (birthYear: string, categories: Category[]) => {
+    if (!birthYear || !categories.length) return null;
+    
+    let year: number;
+    
+    // Detectar formato y extraer el año
+    if (birthYear.includes('/')) {
+      // Formato dd/mm/aaaa, extraer el año
+      const parts = birthYear.split('/');
+      year = parseInt(parts[parts.length - 1]); // Tomar el último elemento como año
+    } else if (birthYear.includes('-')) {
+      // Formato dd-mm-aaaa o similar, extraer el año
+      const parts = birthYear.split('-');
+      year = parseInt(parts[parts.length - 1]); // Tomar el último elemento como año
+    } else {
+      // Formato aaaa directo
+      year = parseInt(birthYear);
+    }
+    
+    // Validar que el año sea válido
+    if (isNaN(year) || year < 1900 || year > 2025) return null;
+    
+    const currentYear = new Date().getFullYear();
+    
+    // Considerar el 20 de marzo como fecha de referencia
+    const referenceDate = new Date(currentYear, 2, 20); // 20 de marzo del año actual
+    const userBirthDate = new Date(year, 2, 20); // 20 de marzo del año de nacimiento
+    const referenceAge = currentYear - year;
+    
+    // Si el cumpleaños es antes del 20 de marzo, ya cumplió años este año
+    const hasHadBirthdayThisYear = userBirthDate <= referenceDate;
+    const actualAge = hasHadBirthdayThisYear ? referenceAge : referenceAge - 1;
+    
+    // Buscar la categoría que corresponde a la edad
+    const matchingCategory = categories.find(cat => {
+      if (cat.min_age !== undefined && actualAge < cat.min_age) return false;
+      if (cat.max_age !== undefined && actualAge > cat.max_age) return false;
+      return true;
+    });
+    
+    if (matchingCategory) {
+      // Asignar colores suaves específicos según el nombre de la categoría
+      const categoryName = matchingCategory.name.toLowerCase();
+      let bgColor = 'bg-slate-50';
+      
+      if (categoryName.includes('infantil') || categoryName.includes('bebé') || categoryName.includes('bebe')) {
+        bgColor = 'bg-pink-50';
+      } else if (categoryName.includes('juvenil')) {
+        bgColor = 'bg-blue-50';
+      } else if (categoryName.includes('adulto')) {
+        bgColor = 'bg-green-50';
+      } else if (categoryName.includes('senior') || categoryName.includes('jubilado')) {
+        bgColor = 'bg-purple-50';
+      }
+      
+      return {
+        name: matchingCategory.name,
+        id: matchingCategory.id,
+        color: bgColor
+      };
+    }
+    
+    return null;
+  };
 
-  // Función para determinar el estilo de la fila según categoría
   const getRowStyle = (category: any) => {
-    const categoryName = category?.name?.toLowerCase() || '';
+    if (!category) return '';
+    return category.color || '';
+  };
+
+  const formatUserName = (user: any) => {
+    return `${user.name || ''} ${user.surname || ''}`.trim();
+  };
+
+  const handleEditUser = (user: any) => {
+    setUserToEdit(user);
+    setIsUserModalOpen(true);
+  };
+
+  const handleOpenFamilyModal = (user: any) => {
+    setFamilyToEdit(families.find(f => f.id === user.family_id));
+    setIsFamilyModalOpen(true);
+  };
+
+  const handleDeleteUser = (user: any) => {
+    setDeleteConfirm({
+      type: 'user',
+      id: user.id,
+      name: `${user.name} ${user.surname || ''}`
+    });
+  };
+
+  const handleDeleteFamily = (family: any) => {
+    setDeleteConfirm({
+      type: 'family',
+      id: family.id,
+      name: family.name
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
     
-    // Infantiles (A y B) con fondo naranja muy claro
-    if (categoryName.includes('infantil')) {
-      return 'bg-orange-50';
+    try {
+      if (deleteConfirm.type === 'user') {
+        // Aquí iría la lógica de eliminación de usuario
+        console.log('Eliminando usuario:', deleteConfirm.id);
+      } else if (deleteConfirm.type === 'family') {
+        // Aquí iría la lógica de eliminación de familia
+        console.log('Eliminando familia:', deleteConfirm.id);
+      }
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error('Error al eliminar:', error);
+      alert('Error al eliminar. Revisa la consola para más detalles.');
     }
-    
-    // Resto de categorías sin fondo especial
-    return '';
   };
 
-  // Función para determinar el estilo del texto de categoría
-  const getCategoryTextStyle = (category: any, isAuto: boolean) => {
-    const categoryName = category?.name?.toLowerCase() || '';
-    
-    // Infantiles (A y B) con texto naranja
-    if (categoryName.includes('infantil')) {
-      return 'text-orange-800';
-    }
-    
-    // Resto de categorías con texto gris
-    return 'text-slate-700';
-  };
-
-  // Función para formatear nombres correctamente
-  const formatUserName = (user: UserType) => {
-    const name = user.name || '';
-    const apellidos = user.apellidos || '';
-    
-    // Convertir a formato título (primera letra mayúscula, resto minúsculas)
-    const formatTitle = (str: string) => {
-      return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
-    };
-    
-    const formattedName = formatTitle(name);
-    const formattedApellidos = formatTitle(apellidos);
-    
-    return apellidos ? `${formattedApellidos}, ${formattedName}` : formattedName;
-  };
-
-  const handleEditFamily = (family: Family) => {
+  const handleEditFamily = (family: any) => {
     setFamilyToEdit(family);
     setIsFamilyModalOpen(true);
   };
 
-  const handleManageQuotas = (family: Family) => {
-    setSelectedFamily(family);
-    setIsQuotaModalOpen(true);
+  const handleManageFamily = (family: any) => {
+    setFamilyToManage(family);
+    setIsFamilyManagementOpen(true);
   };
 
-  const handleCategoryFilter = (categoryId: string) => {
-    setSelectedCategories(prev => {
-      if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
-      }
-    });
+  const toggleCategoryFilter = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(c => c !== categoryId)
+        : [...prev, categoryId]
+    );
   };
 
   const clearCategoryFilters = () => {
     setSelectedCategories([]);
   };
 
-  const handleOpenFamilyModal = () => {
-    setFamilyToEdit(null);
-    setIsFamilyModalOpen(true);
-  };
-
-  const handleEditUser = (user: UserType) => {
-    setUserToEdit(user);
-    setIsUserModalOpen(true);
-  };
-
-  const handleOpenUserModal = () => {
-    setUserToEdit(null);
-    setIsUserModalOpen(true);
-  };
-
   const userCategories = useMemo(() => {
     return users.map(user => {
-      const category = categories.find(c => c.id === user.categoryId);
-      const autoCategory = getAutoCategory(user.anyoNacimiento, categories, currentYear);
+      const autoCategory = user.birth_year ? getAutoCategory(user.birth_year, categories) : null;
       return {
         ...user,
-        category,
-        autoCategory,
-        displayCategory: autoCategory || category // Priorizar automática sobre manual
+        category: null, // Mantener categoría manual como null
+        autoCategory: autoCategory,
+        displayCategory: autoCategory // Usar categoría automática para visualización
       };
     });
-  }, [users, categories, currentYear]);
-
-  const familyCategories = useMemo(() => {
-    return families.map(family => {
-      const members = users.filter(u => family.members.includes(u.id));
-      const representatives = users.filter(u => (family.representativeIds || []).includes(u.id));
-      return {
-        ...family,
-        members,
-        representatives
-      };
-    });
-  }, [families, users]);
+  }, [users, categories]);
 
   const filteredUsers = useMemo(() => {
-    let baseUsers = isAdmin 
-      ? userCategories.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.apellidos?.toLowerCase().includes(searchTerm.toLowerCase()))
-      : userCategories.filter(u => u.familyId === currentUser.familyId);
+    if (!user) return [];
     
-    // Aplicar filtro por categorías si hay categorías seleccionadas
+    let baseUsers = isAdmin 
+      ? userCategories.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()) || u.surname?.toLowerCase().includes(searchTerm.toLowerCase()))
+      : userCategories.filter(u => u.family_id === user.family_id);
+    
+    // Aplicar búsqueda por término si no es admin (para usuarios normales también buscar)
+    if (!isAdmin && searchTerm) {
+      baseUsers = baseUsers.filter(u => 
+        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.surname?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filtrar por categorías seleccionadas
     if (selectedCategories.length > 0) {
       baseUsers = baseUsers.filter(u => 
         u.displayCategory && selectedCategories.includes(u.displayCategory.id)
       );
     }
     
-    return baseUsers.sort((a, b) => {
-      const surnameA = a.apellidos || '';
-      const surnameB = b.apellidos || '';
+    const sortedUsers = baseUsers.sort((a, b) => {
+      const surnameA = a.surname || '';
+      const surnameB = b.surname || '';
       return surnameA.localeCompare(surnameB);
     });
-  }, [userCategories, searchTerm, isAdmin, currentUser, selectedCategories]);
+    
+    return sortedUsers;
+  }, [userCategories, searchTerm, isAdmin, user, selectedCategories]);
+  
+  // Contar falleros por categoría
+  const categoryCounts = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    userCategories.forEach(u => {
+      if (u.displayCategory) {
+        counts[u.displayCategory.id] = (counts[u.displayCategory.id] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [userCategories]);
     
   const filteredFamilies = isAdmin
     ? families.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    : families.filter(f => f.id === currentUser.familyId);
+    : user ? families.filter(f => f.id === user.family_id) : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{isAdmin ? t('navCensus') : t('navMyFamily')}</h2>
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
-            >
-              <Upload className="w-5 h-5 sm:mr-2" />
-              <span className="hidden sm:inline">Importar CSV</span>
-            </button>
-            <button 
-              onClick={() => activeTab === 'usuarios' ? handleOpenUserModal() : handleOpenFamilyModal()}
-              className="flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors shadow-sm"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              {activeTab === 'usuarios' ? t('addFallero') : t('addFamily')}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Tabs & Search */}
-      {isAdmin && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex space-x-1">
-            <button
-              onClick={() => setActiveTab('usuarios')}
-              className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                activeTab === 'usuarios' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <User className="w-4 h-4 mr-2" />
-              {t('falleros')}
-            </button>
-            <button
-              onClick={() => setActiveTab('familias')}
-              className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                activeTab === 'familias' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              {t('families')}
-            </button>
-          </div>
-
-          <div className="relative flex-1 max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-slate-400" />
-            </div>
-            <input
-              type="text"
-              placeholder={activeTab === 'usuarios' ? "Buscar por nombre o apellidos..." : t('searchFamilies')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-            />
-          </div>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{isAdmin ? t('navCensus') : t('navMyFamily')}</h2>
           
-          {/* Filtros por categorías - solo en pestaña de usuarios */}
-          {activeTab === 'usuarios' && categories.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Filtrar por:</span>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(category => {
-                  const isSelected = selectedCategories.includes(category.id);
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => handleCategoryFilter(category.id)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        isSelected 
-                          ? 'bg-indigo-600 text-white' 
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                      }`}
-                    >
-                      {category.name}
-                    </button>
-                  );
-                })}
+          {/* Botones de acción */}
+          <div className="flex flex-wrap gap-2">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setIsUserModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] rounded-xl hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('addFallero')}
+                </button>
+                <button
+                  onClick={() => setIsFamilyModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('addFamily')}
+                </button>
+                                <button
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Imp. Cens
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs, filtros y buscador en la misma línea */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mt-4">
+          {/* Tabs */}
+          <div className="border-b border-slate-200 lg:border-b-0 flex-shrink-0">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('usuarios')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'usuarios'
+                    ? 'border-slate-800 text-slate-800'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <Users className="h-5 w-5 mr-2" />
+                {t('falleros')}
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('familias')}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'familias'
+                      ? 'border-slate-800 text-slate-800'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <Home className="h-5 w-5 mr-2" />
+                  {t('families')}
+                </button>
+              )}
+            </nav>
+          </div>
+
+          {/* Espacio flexible para empujar filtros y buscador a la derecha */}
+          <div className="flex-1"></div>
+
+          {/* Filtros y buscador juntos a la derecha */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Filtros por categorías */}
+            <div className="flex items-center">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-slate-600 mr-2">Filtrar:</span>
+                {categories.map(cat => {
+                  const count = categoryCounts[cat.id] || 0;
+                  const isSelected = selectedCategories.includes(cat.id);
+                  const categoryName = cat.name.toLowerCase();
+                  
+                  // Asignar colores a los botones según categoría
+                let buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
+                let selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                
+                if (categoryName.includes('infantil') || categoryName.includes('bebé') || categoryName.includes('bebe')) {
+                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
+                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                } else if (categoryName.includes('juvenil')) {
+                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
+                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                } else if (categoryName.includes('adulto')) {
+                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
+                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                } else if (categoryName.includes('senior') || categoryName.includes('jubilado')) {
+                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
+                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                }
+                
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => toggleCategoryFilter(cat.id)}
+                    className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${isSelected ? selectedColor : buttonColor} ${count === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={count === 0}
+                  >
+                    {cat.name} ({count})
+                  </button>
+                );
+              })}
                 {selectedCategories.length > 0 && (
                   <button
                     onClick={clearCategoryFilters}
-                    className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                    className="ml-2 text-xs text-slate-500 hover:text-slate-700 transition-colors underline"
                   >
                     Limpiar
                   </button>
                 )}
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* List */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            {/* Buscador */}
+            <div className="w-64">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 text-slate-400 transform -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={t('searchUsers')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* List - ocupa el espacio restante */}
+      <div className="flex-1 overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200 m-4 mt-0 min-h-0">
         {activeTab === 'usuarios' || !isAdmin ? (
-          <div className="h-[800px] overflow-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colNumCenso')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colCodJCF')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colSurnames')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colName')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colCategory')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colDNI')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colPhone')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colAddress')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colCity')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colCP')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colBirth')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colSex')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colRole')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colReward')}</th>
-                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colFamily')}</th>
-                  {isAdmin && <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">{t('colActions')}</th>}
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {filteredUsers.map(user => {
-                  const family = families.find(f => f.id === user.familyId);
-                  return (
-                    <tr key={user.id} className={`hover:bg-slate-50 transition-colors ${getRowStyle(user.displayCategory)}`}>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.numeroCenso || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.codigoJCF || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.apellidos || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-slate-900">{user.name}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                        {user.displayCategory ? (
-                          <span className={getCategoryTextStyle(user.displayCategory, !!user.autoCategory)}>
-                            {user.displayCategory.name}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
+          <div className="h-[calc(100vh-280px)] overflow-auto">
+            <div style={{width: '1600px'}}>
+              <table className="w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50 sticky top-0 z-20">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colNumCenso')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colCodJCF')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colSurnames')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colName')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colCategory')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colDNI')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colPhone')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colAddress')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colCity')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colCP')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colBirth')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colSex')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colEmail')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colCarrec')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colRole')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colReward')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colFamily')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colTutor')}</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colTutorPhone')}</th>
+                    {isAdmin && <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider bg-slate-50">{t('colActions')}</th>}
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {filteredUsers.map(user => {
+                    const family = families.find(f => f.id === user.family_id);
+                    return (
+                      <tr 
+                        key={user.id} 
+                        className={`hover:bg-slate-100 transition-colors cursor-pointer ${user.displayCategory?.color || ''}`}
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.numero_censo || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.codigo_jcf || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.surname || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.name || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.displayCategory?.name || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.dni || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.phone || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.address || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.poblacion || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.codigo_postal || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.birth_year || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.sexo || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.correu || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.cargo || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.role || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.recompensa || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{family?.name || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.tutor || '-'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.telefon_tutor || '-'}</td>
+                        {isAdmin && (
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditUser(user);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50"
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteUser(user);
+                                }}
+                                className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                                title="Eliminar"
+                              >
+                                <Trash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
                         )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.dni || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.telefono || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.direccion || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.poblacion || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.codigoPostal || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.anyoNacimiento || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.sexo || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.cargo || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{user.recompensa || '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">{family?.name || 'Sin familia'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                        <RoleManagement user={user} onUpdate={() => window.location.reload()} />
-                      </td>
-                      {isAdmin && (
-                        <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
-                            onClick={() => handleEditUser(user)}
-                            className="text-indigo-600 hover:text-indigo-900 transition-colors"
-                            title="Editar Fallero"
-                          >
-                            <Edit className="w-4 h-4 inline-block" />
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
+                      </tr>
+                    );
+                  })}
+                </tbody>
             </table>
           </div>
+        </div>
         ) : (
-          <div className="h-[800px] overflow-auto divide-y divide-slate-100">
-            {filteredFamilies.map(family => {
-              const representatives = users.filter(u => (family.representativeIds || []).includes(u.id));
-              const familyMembers = users.filter(u => family.members.includes(u.id));
-              
-              return (
-                <div key={family.id} className="p-4 sm:p-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <h4 className="text-base font-bold text-slate-800 flex items-center">
-                      {family.name}
-                      {isAdmin && (
-                        <button 
-                          onClick={() => handleEditFamily(family)}
-                          className="ml-3 text-slate-400 hover:text-indigo-600 transition-colors"
-                          title="Editar Familia"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      )}
-                    </h4>
-                    <p className="text-sm text-slate-500 mb-2">{t('representative')}: <span className="font-medium text-slate-700">
-                      {representatives.length > 0 
-                        ? representatives.map(r => formatUserName(r)).join(', ')
-                        : 'Ninguno'
-                      }
-                    </span></p>
-                    
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {familyMembers.map(member => (
-                        <span key={member.id} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                          <UserCircle className="w-3 h-3 mr-1" />
-                          {member.name}
-                          {member.id && representatives.some(r => r.id === member.id) && <span className="ml-1 text-indigo-600">(Rep)</span>}
-                        </span>
-                      ))}
-                    </div>
+          <div className="h-full overflow-auto p-4 space-y-4 max-h-[calc(100vh-280px)]">
+            {filteredFamilies.map(family => (
+              <div key={family.id} className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-slate-900">{family.name}</h3>
+                    <p className="text-sm text-slate-500">
+                      {family.address || ''}
+                    </p>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <button
-                        onClick={() => handleManageQuotas(family)}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
-                        title="Gestionar Cuotas"
-                      >
-                        <Calculator className="w-3 h-3 mr-1" />
-                        Cuotas
-                      </button>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                        {family.members.length} {t('members')}
-                      </span>
-                    </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleManageFamily(family)}
+                      className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50"
+                      title="Gestionar familia"
+                    >
+                      <Users className="h-4 w-4" />
+                    </button>
+                                        <button
+                      onClick={() => handleDeleteFamily(family)}
+                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50"
+                      title="Eliminar familia"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-              );
-            })}
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-4 text-sm text-slate-500">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
+                      {users.filter(u => u.family_id === family.id).length} {t('members')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       <UserFormModal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} userToEdit={userToEdit} />
       <FamilyFormModal isOpen={isFamilyModalOpen} onClose={() => setIsFamilyModalOpen(false)} familyToEdit={familyToEdit} />
-      <ImportCensusModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
-      {selectedFamily && (
-        <FamilyQuotaModal
-          isOpen={isQuotaModalOpen}
-          onClose={() => setIsQuotaModalOpen(false)}
-          family={selectedFamily}
-          familyUsers={users.filter(u => selectedFamily.members.includes(u.id))}
-          categories={categories}
-          onUpdate={() => {
-            // Forzar recarga de datos
-            window.location.reload();
-          }}
-        />
+      <FamilyManagementModal isOpen={isFamilyManagementOpen} onClose={() => setIsFamilyManagementOpen(false)} family={familyToManage} />
+                  <ImportCensusModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+      
+      {/* Modal de confirmación de eliminación */}
+      {deleteConfirm && (
+        <Modal isOpen={true} onClose={() => setDeleteConfirm(null)} title="Confirmar Eliminación" maxWidth="max-w-md">
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              ¿Estás seguro de que deseas eliminar {deleteConfirm.type === 'user' ? 'al fallero' : 'la familia'} <strong>{deleteConfirm.name}</strong>?
+            </p>
+            <p className="text-xs text-slate-500">
+              Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
       
-      {/* Componente de inicialización de Master Admin */}
       <MasterAdminInit />
     </div>
   );

@@ -19,9 +19,9 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'max-w-md' 
           <h3 className="text-lg font-bold text-slate-800">{title}</h3>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
         <div className="p-4 max-h-[80vh] overflow-y-auto">

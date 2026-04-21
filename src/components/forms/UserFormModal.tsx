@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { useData } from '../../lib/DataContext';
+import { useSupabase } from '../../lib/SupabaseContext';
 import { useTranslation } from '../../lib/i18n';
-import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { User } from '../../types';
+import { User } from '../../lib/supabase';
 
 interface UserFormModalProps {
   isOpen: boolean;
@@ -13,62 +11,68 @@ interface UserFormModalProps {
 }
 
 export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProps) {
-  const { families, categories } = useData();
+  const { families, categories, createUser, updateUser } = useSupabase();
   const { t } = useTranslation();
   
   const [formData, setFormData] = useState<Partial<User>>({
     name: '',
-    apellidos: '',
+    surname: '',
     email: '',
     dni: '',
-    telefono: '',
-    direccion: '',
-    poblacion: '',
-    codigoPostal: '',
-    anyoNacimiento: '',
+    phone: '',
+    address: '',
+    category_id: '',
+    birth_year: '',
     sexo: '',
     cargo: '',
     recompensa: '',
-    codigoJCF: '',
-    numeroCenso: '',
-    role: 'fallero',
-    categoryId: '',
-    isAdult: true,
-    isFamilyAdmin: false,
-    familyId: ''
+    codigo_jcf: '',
+    numero_censo: '',
+    poblacion: '',
+    codigo_postal: '',
+    role: 'user',
+    family_id: ''
   });
 
+  // Initialize form with user data when editing
   React.useEffect(() => {
     if (userToEdit) {
-      // Solo usar campos que existen en la base de datos, excluir campos calculados
-      const dbUser = Object.keys(userToEdit)
-        .filter(key => !['autoCategory', 'category', 'displayCategory'].includes(key))
-        .reduce((obj, key) => {
-          obj[key] = userToEdit[key];
-          return obj;
-        }, {} as User);
-      setFormData(dbUser);
+      setFormData({
+        name: userToEdit.name || '',
+        surname: userToEdit.surname || '',
+        email: userToEdit.email || '',
+        dni: userToEdit.dni || '',
+        phone: userToEdit.phone || '',
+        address: userToEdit.address || '',
+        birth_year: userToEdit.birth_year || '',
+        sexo: userToEdit.sexo || '',
+        cargo: userToEdit.cargo || '',
+        recompensa: userToEdit.recompensa || '',
+        codigo_jcf: userToEdit.codigo_jcf || '',
+        numero_censo: userToEdit.numero_censo || '',
+        poblacion: userToEdit.poblacion || '',
+        codigo_postal: userToEdit.codigo_postal || '',
+        role: userToEdit.role || 'user',
+        family_id: userToEdit.family_id || ''
+      });
     } else {
       setFormData({
         name: '',
-        apellidos: '',
+        surname: '',
         email: '',
         dni: '',
-        telefono: '',
-        direccion: '',
-        poblacion: '',
-        codigoPostal: '',
-        anyoNacimiento: '',
+        phone: '',
+        address: '',
+        birth_year: '',
         sexo: '',
         cargo: '',
         recompensa: '',
-        codigoJCF: '',
-        numeroCenso: '',
-        role: 'fallero',
-        categoryId: '',
-        isAdult: true,
-        isFamilyAdmin: false,
-        familyId: ''
+        codigo_jcf: '',
+        numero_censo: '',
+        poblacion: '',
+        codigo_postal: '',
+        role: 'user',
+        family_id: ''
       });
     }
   }, [userToEdit, isOpen]);
@@ -76,258 +80,237 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (userToEdit) {
-        await updateDoc(doc(db, 'users', userToEdit.id), formData);
-      } else {
-        await addDoc(collection(db, 'users'), formData);
+      // Remove family_id if empty to avoid UUID error
+      const submitData = { ...formData };
+      if (!submitData.family_id) {
+        delete submitData.family_id;
       }
-      onClose();
-      if (!userToEdit) {
-        // Reset form
-        setFormData({
-        name: '',
-        apellidos: '',
-        email: '',
-        dni: '',
-        telefono: '',
-        direccion: '',
-        poblacion: '',
-        codigoPostal: '',
-        anyoNacimiento: '',
-        sexo: '',
-        cargo: '',
-        recompensa: '',
-        codigoJCF: '',
-        numeroCenso: '',
-        role: 'fallero',
-        categoryId: '',
-        isAdult: true,
-        isFamilyAdmin: false,
-        familyId: ''
+      
+      // Auto-generate email if empty
+      if (!submitData.email && submitData.dni) {
+        submitData.email = `${submitData.dni}@falla-martirs.com`;
+      }
+      
+      // Check if email is required (not for Infantil or Bebé categories)
+      const isInfantileCategory = categories.some(cat => {
+        const categoryName = cat.name.toLowerCase();
+        return categoryName.includes('infantil') || categoryName.includes('bebé') || categoryName.includes('bebe');
       });
+      
+      if (!isInfantileCategory && !submitData.email) {
+        alert('El correo electrónico es obligatorio para esta categoría. Por favor, introduce un DNI para generar un email automáticamente.');
+        return;
       }
+      
+      if (userToEdit) {
+        await updateUser(userToEdit.id, submitData);
+      } else {
+        await createUser(submitData as Omit<User, 'id' | 'created_at' | 'updated_at'>);
+      }
+      
+      onClose();
     } catch (error) {
       console.error("Error saving user:", error);
-      alert("Error saving user. Check console for details.");
+      alert("Error al guardar usuario. Revisa la consola para más detalles.");
     }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={userToEdit ? 'Editar Fallero' : t('addFallero')} maxWidth="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={userToEdit ? t('edit') + ' ' + t('falleros') : t('addFallero')} maxWidth="max-w-4xl">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('name')}</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        <div className="space-y-6">
+          {/* Primera fila: Nombre y Apellidos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colName')}</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colSurnames')}</label>
+              <input
+                type="text"
+                value={formData.surname}
+                onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Apellidos</label>
-            <input
-              type="text"
-              value={formData.apellidos}
-              onChange={(e) => setFormData({ ...formData, apellidos: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{t('email')}</label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">DNI</label>
-            <input
-              type="text"
-              value={formData.dni}
-              onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Teléfono</label>
-            <input
-              type="text"
-              value={formData.telefono}
-              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+          {/* Segunda fila: Email y Familia */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('email')} {categories.some(cat => cat.name.toLowerCase().includes('infantil') || cat.name.toLowerCase().includes('bebé') || cat.name.toLowerCase().includes('bebe')) ? '(Opcional)' : '(Obligatorio)'}</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder={formData.dni ? `${formData.dni}@falla-martirs.com` : 'Introduce email o DNI para auto-generar'}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {formData.dni && !formData.email && (
+                <p className="text-xs text-slate-500 mt-1">Se generará automáticamente: {formData.dni}@falla-martirs.com</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colFamily')}</label>
+              <select
+                value={formData.family_id}
+                onChange={(e) => setFormData({ ...formData, family_id: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Seleccionar...</option>
+                {families.map(family => (
+                  <option key={family.id} value={family.id}>{family.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Año Nacimiento</label>
-            <input
-              type="text"
-              value={formData.anyoNacimiento}
-              onChange={(e) => setFormData({ ...formData, anyoNacimiento: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+          {/* Tercera fila: Campos cortos en 4 columnas */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">DNI</label>
+              <input
+                type="text"
+                value={formData.dni}
+                onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colPhone')}</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colCategory')}</label>
+              <select
+                value={formData.category_id}
+                onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">{t('selectCategory')}</option>
+                {categories.map(category => (
+                  <option 
+                    key={category.id} 
+                    value={category.id}
+                    className={category.color ? `bg-${category.color} text-white` : ''}
+                  >
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colSex')}</label>
+              <select
+                value={formData.sexo}
+                onChange={(e) => setFormData({ ...formData, sexo: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="M">{t('male')}</option>
+                <option value="F">{t('female')}</option>
+              </select>
+            </div>
           </div>
 
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
-            <input
-              type="text"
-              value={formData.direccion}
-              onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+          {/* Quinta fila: Dirección, Población y CP */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colAddress')}</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colCity')}</label>
+              <input
+                type="text"
+                value={formData.poblacion}
+                onChange={(e) => setFormData({ ...formData, poblacion: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colCP')}</label>
+              <input
+                type="text"
+                value={formData.codigo_postal}
+                onChange={(e) => setFormData({ ...formData, codigo_postal: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                maxLength={5}
+                placeholder="00000"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Población</label>
-            <input
-              type="text"
-              value={formData.poblacion}
-              onChange={(e) => setFormData({ ...formData, poblacion: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+          {/* Sexta fila: Código JCF, Número Censo, Cargo y Recompensa */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colCodJCF')}</label>
+              <input
+                type="text"
+                value={formData.codigo_jcf}
+                onChange={(e) => setFormData({ ...formData, codigo_jcf: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colNumCenso')}</label>
+              <input
+                type="text"
+                value={formData.numero_censo}
+                onChange={(e) => setFormData({ ...formData, numero_censo: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colRole')}</label>
+              <input
+                type="text"
+                value={formData.cargo}
+                onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colReward')}</label>
+              <input
+                type="text"
+                value={formData.recompensa}
+                onChange={(e) => setFormData({ ...formData, recompensa: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">C. Postal</label>
-            <input
-              type="text"
-              value={formData.codigoPostal}
-              onChange={(e) => setFormData({ ...formData, codigoPostal: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Cargo</label>
-            <input
-              type="text"
-              value={formData.cargo}
-              onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Recompensa</label>
-            <input
-              type="text"
-              value={formData.recompensa}
-              onChange={(e) => setFormData({ ...formData, recompensa: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Cód. JCF</label>
-            <input
-              type="text"
-              value={formData.codigoJCF}
-              onChange={(e) => setFormData({ ...formData, codigoJCF: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Num. Censo</label>
-            <input
-              type="text"
-              value={formData.numeroCenso}
-              onChange={(e) => setFormData({ ...formData, numeroCenso: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">{t('role')}</label>
-          <select
-            value={formData.role}
-            onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="fallero">Fallero</option>
-            <option value="admin">Admin</option>
-            <option value="directiva">Directiva</option>
-            <option value="delegado_festejos">Delegado Festejos</option>
-            <option value="delegado_loteria">Delegado Lotería</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">{t('category')}</label>
-          <select
-            required
-            value={formData.categoryId}
-            onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Select Category</option>
-            {categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">{t('family')}</label>
-          <select
-            value={formData.familyId}
-            onChange={(e) => setFormData({ ...formData, familyId: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">None</option>
-            {families.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.isAdult}
-              onChange={(e) => setFormData({ ...formData, isAdult: e.target.checked })}
-              className="rounded text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm font-medium text-slate-700">{t('isAdult')}</span>
-          </label>
-
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={formData.isFamilyAdmin}
-              onChange={(e) => setFormData({ ...formData, isFamilyAdmin: e.target.checked })}
-              className="rounded text-indigo-600 focus:ring-indigo-500"
-            />
-            <span className="text-sm font-medium text-slate-700">{t('isFamilyAdmin')}</span>
-          </label>
         </div>
 
         <div className="pt-4 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+            className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors text-sm"
           >
             {t('cancel')}
           </button>
           <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
-          >
-            {t('save')}
+              type="submit"
+              className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
+            >
+            {userToEdit ? t('update') : t('create')}
           </button>
         </div>
       </form>
