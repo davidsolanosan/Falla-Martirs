@@ -1,19 +1,7 @@
 {
-  "version": 2,
-  "name": "falla-martirs-nova",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/service-worker.js", "destination": "/service-worker.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
