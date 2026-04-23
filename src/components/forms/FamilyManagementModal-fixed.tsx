@@ -29,7 +29,7 @@ interface FamilyManagementModalProps {
   onDelete: (familyId: string) => Promise<void>;
 }
 
-function FamilyManagementModal({ 
+export default function FamilyManagementModal({ 
   isOpen, 
   onClose, 
   family, 
@@ -205,5 +205,3 @@ function FamilyManagementModal({
     </div>
   );
 }
-
-export default FamilyManagementModal;

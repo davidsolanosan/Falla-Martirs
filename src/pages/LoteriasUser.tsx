@@ -28,16 +28,6 @@ export default function LoteriasUser() {
     }
   };
 
-  const loadUserTickets = async (lotteryId: string) => {
-    try {
-      // Aquí cargaremos las papeletas del usuario (cuando implementemos)
-      console.log('Cargando papeletas para sorteo:', lotteryId);
-      setUserTickets([]);
-    } catch (error) {
-      console.error('Error cargando papeletas:', error);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', { 
@@ -48,10 +38,11 @@ export default function LoteriasUser() {
   };
 
   const calculateTotal = (lottery: LotteryDate) => {
-    let total = lottery.lottery_price + lottery.donation_price;
+    let total = lottery.lottery_price;
     if (lottery.primitive_price) {
       total += lottery.primitive_price;
     }
+    total += lottery.donation_price;
     return total.toFixed(2);
   };
 
@@ -65,14 +56,44 @@ export default function LoteriasUser() {
     setExpandedMonths(newExpanded);
   };
 
+  const loadUserTickets = async (lotteryId: string) => {
+    try {
+      const exampleTickets: LotteryTicket[] = [
+        {
+          id: '1',
+          lottery_date_id: lotteryId,
+          lottery_number: '12345',
+          primitive_numbers: ['12', '34', '56'],
+          is_paid: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          lottery_date_id: lotteryId,
+          lottery_number: '67890',
+          primitive_numbers: ['78', '90'],
+          is_paid: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ];
+      setUserTickets(exampleTickets);
+    } catch (error) {
+      console.error('Error cargando papeletas:', error);
+    }
+  };
+
   const groupLotteriesByMonth = (lotteries: LotteryDate[]) => {
     const months: { [key: string]: LotteryDate[] } = {};
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     
     lotteries.forEach(lottery => {
       const date = new Date(lottery.date);
-      const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+      const monthName = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      const monthKey = `${monthName} ${year}`;
       
       if (!months[monthKey]) {
         months[monthKey] = [];
@@ -80,14 +101,14 @@ export default function LoteriasUser() {
       months[monthKey].push(lottery);
     });
     
-    // Ordenar meses cronológicamente
     const sortedMonths = Object.keys(months).sort((a, b) => {
       const [monthA, yearA] = a.split(' ');
       const [monthB, yearB] = b.split(' ');
+      
       const monthIndexA = monthNames.indexOf(monthA);
       const monthIndexB = monthNames.indexOf(monthB);
       
-      if (parseInt(yearA) !== parseInt(yearB)) {
+      if (yearA !== yearB) {
         return parseInt(yearA) - parseInt(yearB);
       }
       return monthIndexA - monthIndexB;
@@ -101,10 +122,10 @@ export default function LoteriasUser() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-          <p className="mt-4 text-purple-600">{t('loading')}</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-blue-600">{t('loading')}</p>
         </div>
       </div>
     );
@@ -115,18 +136,17 @@ export default function LoteriasUser() {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex items-center">
-            <TrophyIcon className="h-6 w-6 text-purple-600 mr-2" />
-            <h1 className="text-xl font-bold text-gray-800">{t('lottery_title')}</h1>
+            <TrophyIcon className="h-6 w-6 mr-2" style={{color: 'rgb(48,80,105)'}} />
+            <h1 className="text-xl font-bold" style={{color: 'rgb(48,80,105)'}}>{t('lottery_title')}</h1>
           </div>
         </div>
 
-        {/* Lista de Sorteos por Meses - Diseño Compacto */}
         <div className="space-y-4">
           {groupLotteriesByMonth(lotteryDates).map(({ month, lotteries }) => (
             <div key={month} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              {/* Header del Mes - Desplegable */}
               <div 
-                className="bg-gray-50 border-b border-gray-200 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
+                style={{borderBottom: '1px solid rgb(48,80,105)', backgroundColor: 'rgb(248,250,252)'}}
                 onClick={() => toggleMonth(month)}
               >
                 <div className="flex justify-between items-center">
@@ -136,7 +156,7 @@ export default function LoteriasUser() {
                     ) : (
                       <ChevronRightIcon className="h-5 w-5 text-gray-600 mr-2" />
                     )}
-                    <h2 className="text-base font-bold text-gray-800">
+                    <h2 className="text-base font-bold" style={{color: 'rgb(48,80,105)'}}>
                       {month}
                     </h2>
                   </div>
@@ -152,125 +172,120 @@ export default function LoteriasUser() {
                   </div>
                 </div>
               </div>
-              
-              {/* Sorteos del Mes - Solo si está expandido */}
+
               {expandedMonths.has(month) && (
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y" style={{borderTopColor: 'rgb(48,80,105)'}}>
                   {lotteries.map((lottery) => (
-                  <div 
-                    key={lottery.id} 
-                    className={`p-3 cursor-pointer transition-all ${
-                      lottery.special 
-                        ? 'bg-amber-50 hover:bg-amber-100' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => {
-                      setSelectedLottery(lottery);
-                      setShowTickets(false);
-                      loadUserTickets(lottery.id);
-                    }}
-                  >
-                    {/* Header Compacto */}
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center">
-                        <h3 className="text-base font-semibold text-gray-900">
-                          {lottery.name}
-                        </h3>
-                        {lottery.special && (
-                          <span className="ml-2 bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
-                            {t('lottery_special')}
-                          </span>
-                        )}
+                    <div 
+                      key={lottery.id} 
+                      className={`p-3 cursor-pointer transition-all ${
+                        lottery.special 
+                          ? 'bg-amber-50 hover:bg-amber-100' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => {
+                        setSelectedLottery(lottery);
+                        setShowTickets(false);
+                        loadUserTickets(lottery.id);
+                      }}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center">
+                          <h3 className="text-base font-semibold text-gray-900">
+                            {lottery.name}
+                          </h3>
+                          {lottery.special && (
+                            <span className="ml-2 px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full">
+                              {t('lottery_special')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm text-gray-600">{formatDate(lottery.date)}</span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500">{formatDate(lottery.date)}</div>
-                        {lottery.prize_amount && lottery.prize_amount > 0 && (
-                          <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded mt-1">
-                            {t('lottery_prize_amount')}: {lottery.prize_amount.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Precios Compactos */}
-                    <div className="flex justify-between items-center text-xs text-gray-600 mb-2">
-                      <div className="flex space-x-3">
-                        <span>Lotería: {lottery.lottery_price.toFixed(2)}</span>
-                        {lottery.primitive_price && (
-                          <span>Primitiva: {lottery.primitive_price.toFixed(2)}</span>
-                        )}
-                        <span>Donación: {lottery.donation_price.toFixed(2)}</span>
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-700 mb-2">
+                        <div className="flex flex-col space-y-1">
+                          <span>Lotería: {lottery.lottery_price.toFixed(2)}</span>
+                          {lottery.primitive_price && (
+                            <span>Primitiva: {lottery.primitive_price.toFixed(2)}</span>
+                          )}
+                          <span>Donación: {lottery.donation_price.toFixed(2)}</span>
+                        </div>
+                        <div className="font-semibold text-gray-800 text-right">
+                          Total: {calculateTotal(lottery)}
+                        </div>
                       </div>
-                      <div className="font-semibold text-gray-800">
-                        Total: {calculateTotal(lottery)}
-                      </div>
-                    </div>
 
-                    {/* Papeletas y Acción */}
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                      <div className="flex items-center text-xs text-gray-600">
-                        <UserIcon className="h-3 w-3 mr-1" />
-                        <span>{userTickets.filter(t => t.lottery_date_id === lottery.id).length} papeletas</span>
+                      <div className="flex justify-between pt-2 border-t font-semibold text-green-600">
+                        <span>{t('lottery_prize_amount')}:</span>
+                        <span>€{lottery.prize_amount ? lottery.prize_amount.toFixed(2) : '0.00'}</span>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedLottery(lottery);
-                          setShowTickets(!showTickets);
-                          loadUserTickets(lottery.id);
-                        }}
-                        className="text-xs text-purple-600 hover:text-purple-800 font-medium"
-                      >
-                        {showTickets && selectedLottery?.id === lottery.id ? 'Ocultar' : 'Ver'}
-                      </button>
-                    </div>
 
-                    {/* Papeletas Compactas */}
-                    {showTickets && selectedLottery?.id === lottery.id && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        {userTickets.length === 0 ? (
-                          <p className="text-xs text-gray-500 text-center py-2">
-                            {t('lottery_no_tickets_assigned')}
-                          </p>
-                        ) : (
-                          <div className="space-y-2">
-                            {userTickets.map((ticket) => (
-                              <div key={ticket.id} className="bg-gray-50 border border-gray-200 rounded p-2">
-                                <div className="flex justify-between items-center">
-                                  <div className="flex items-center space-x-2">
-                                    <span className="font-bold text-sm text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
-                                      {ticket.lottery_number}
-                                    </span>
-                                    {ticket.primitive_numbers && ticket.primitive_numbers.length > 0 && (
-                                      <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                        {ticket.primitive_numbers.join('-')}
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                        <div className="flex items-center text-xs text-gray-600">
+                          <UserIcon className="h-3 w-3 mr-1" />
+                          <span>{userTickets.filter(t => t.lottery_date_id === lottery.id).length} papeletas</span>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedLottery(lottery);
+                            setShowTickets(!showTickets);
+                            loadUserTickets(lottery.id);
+                          }}
+                          className="text-xs text-purple-600 hover:text-purple-800 font-medium"
+                        >
+                          {showTickets && selectedLottery?.id === lottery.id ? 'Ocultar' : 'Ver'}
+                        </button>
+                      </div>
+
+                      {showTickets && selectedLottery?.id === lottery.id && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          {userTickets.length === 0 ? (
+                            <p className="text-xs text-gray-500 text-center py-2">
+                              {t('lottery_no_tickets_assigned')}
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {userTickets.map((ticket) => (
+                                <div key={ticket.id} className="bg-gray-50 border border-gray-200 rounded p-2">
+                                  <div className="flex justify-between items-center">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-bold text-sm px-2 py-0.5 rounded" style={{color: 'rgb(48,80,105)', backgroundColor: 'rgb(239,246,255)'}}>
+                                        {ticket.lottery_number}
                                       </span>
-                                    )}
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                      ticket.is_paid 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                      {ticket.is_paid ? 'Pagado' : 'Pendiente'}
-                                    </span>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-xs text-gray-600">{calculateTotal(lottery)}</div>
-                                    {ticket.prize_amount && ticket.prize_amount > 0 && (
-                                      <div className="text-xs font-bold text-green-600">
-                                        +{ticket.prize_amount.toFixed(2)}
-                                      </div>
-                                    )}
+                                      {ticket.primitive_numbers && ticket.primitive_numbers.length > 0 && (
+                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{color: 'rgb(48,80,105)', backgroundColor: 'rgb(239,246,255)'}}>
+                                          {ticket.primitive_numbers.join('-')}
+                                        </span>
+                                      )}
+                                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                        ticket.is_paid 
+                                          ? 'bg-green-100 text-green-700' 
+                                          : 'bg-yellow-100 text-yellow-700'
+                                      }`}>
+                                        {ticket.is_paid ? 'Pagado' : 'Pendiente'}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                      <div className="text-xs text-gray-600">{calculateTotal(lottery)}</div>
+                                      {ticket.prize_amount && ticket.prize_amount > 0 && (
+                                        <div className="text-xs font-bold text-green-600">
+                                          +{ticket.prize_amount.toFixed(2)}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

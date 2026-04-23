@@ -213,24 +213,24 @@ export default function LoteriasAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
+    <div className="min-h-screen bg-white p-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-blue-200 p-6 mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Ticket className="w-6 h-6 text-blue-600" />
+              <div className="p-3 bg-blue-600 rounded-xl">
+                <Ticket className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-800">{t('navAdminLottery')}</h1>
-                <p className="text-sm text-slate-500">{t('manageLotteries')}</p>
+                <h1 className="text-2xl font-bold text-blue-600">{t('navAdminLottery')}</h1>
+                <p className="text-sm text-black">{t('manageLotteries')}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <div className="text-right">
-                <p className="text-sm text-slate-500">{t('totalLotteries')}</p>
-                <p className="text-2xl font-bold text-slate-800">
+                <p className="text-sm text-black">{t('totalLotteries')}</p>
+                <p className="text-2xl font-bold text-blue-600">
                   {months.reduce((total, month) => total + month.dates.filter(d => d.name).length, 0)}
                 </p>
               </div>
@@ -241,7 +241,7 @@ export default function LoteriasAdmin() {
         {/* Lista de Meses */}
         <div className="space-y-4">
           {months.map((month, monthIndex) => (
-            <div key={monthIndex} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div key={monthIndex} className="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
               {/* Header del Mes */}
               <div 
                 className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 transition-colors"
@@ -249,8 +249,8 @@ export default function LoteriasAdmin() {
               >
                 <div className="flex items-center space-x-3">
                   <div className="text-left">
-                    <h3 className="text-lg font-semibold text-slate-800">{month.month}</h3>
-                    <p className="text-sm text-slate-500">
+                    <h3 className="text-lg font-semibold text-blue-600">{month.month}</h3>
+                    <p className="text-sm text-black">
                       {month.dates.length} {month.dates.length === 1 ? t('lotteriesCount') : t('lotteriesCountPlural')}
                       {month.dates.some(d => d.name) && ` ${t('activeLotteries')}`}
                     </p>
@@ -258,48 +258,48 @@ export default function LoteriasAdmin() {
                 </div>
                 <div className="flex items-center space-x-2">
                   {month.dates.filter(d => d.name).length > 0 && (
-                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
                       {month.dates.filter(d => d.name).length} {t('active')}
                     </span>
                   )}
                   {month.isOpen ? (
-                    <ChevronUpIcon className="w-5 h-5 text-slate-400" />
+                    <ChevronUpIcon className="w-5 h-5 text-blue-400" />
                   ) : (
-                    <ChevronDownIcon className="w-5 h-5 text-slate-400" />
+                    <ChevronDownIcon className="w-5 h-5 text-blue-400" />
                   )}
                 </div>
               </div>
 
               {/* Lista de Loterías del Mes */}
               {month.isOpen && (
-                <div className="border-t border-slate-100 p-4">
+                <div className="border-t border-blue-100 p-4">
                   <div className="space-y-3">
                     {month.dates.map((lottery, dateIndex) => (
-                      <div key={dateIndex} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                      <div key={dateIndex} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
                         <div className="flex items-center space-x-4">
                           <div className="text-center">
-                            <p className="text-xs text-slate-500 uppercase">{formatDayOfWeek(lottery.date)}</p>
-                            <p className="text-lg font-bold text-slate-800">{formatDate(lottery.date)}</p>
+                            <p className="text-xs text-black uppercase">{formatDayOfWeek(lottery.date)}</p>
+                            <p className="text-lg font-bold text-black">{formatDate(lottery.date)}</p>
                           </div>
                           <div>
                             {lottery.name ? (
                               <div>
-                                <p className="font-medium text-slate-800">{lottery.name}</p>
+                                <p className="font-medium text-black">{lottery.name}</p>
                                 {lottery.special && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                     {t('special')}
                                   </span>
                                 )}
                               </div>
                             ) : (
-                              <p className="text-sm text-slate-400 italic">{t('noLottery')}</p>
+                              <p className="text-sm text-black italic">{t('noLottery')}</p>
                             )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => openEditModal(monthIndex, dateIndex, lottery)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                             title={t('edit')}
                           >
                             <Edit2 className="w-4 h-4" />
@@ -307,7 +307,7 @@ export default function LoteriasAdmin() {
                           {lottery.name && (
                             <button
                               onClick={() => handleDeleteLottery(monthIndex, dateIndex)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-2 text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
                               title={t('delete')}
                             >
                               <Trash2 className="w-4 h-4" />

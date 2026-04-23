@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
-import { LotteryDate, LotteryTicket, supabase } from '../lib/supabase';
+import { LotteryDate, LotteryTicket } from '../lib/supabase';
 import { 
   PlusIcon, 
   PencilIcon, 
   TrashIcon, 
   CalendarIcon, 
   CurrencyEuroIcon,
-  CurrencyDollarIcon,
+  TrophyIcon,
   UserGroupIcon
 } from '@heroicons/react/24/outline';
 
@@ -24,15 +24,10 @@ interface LotteryFormData {
 
 export default function LoteriasAdmin() {
   const { t } = useTranslation();
-  const { lotteryDates, refreshLotteryDates } = useSupabase();
+  const { supabase } = useSupabase();
   
-  const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useState(t('language'));
-  
-  // Recalcular cuando cambia el idioma
-  useEffect(() => {
-    setLanguage(t('language'));
-  }, [t('language')]);
+  const [lotteryDates, setLotteryDates] = useState<LotteryDate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [showForm, setShowForm] = useState(false);
@@ -65,6 +60,27 @@ export default function LoteriasAdmin() {
     setEditingLottery(null);
   };
 
+  // Load lottery dates
+  useEffect(() => {
+    loadLotteryDates();
+  }, []);
+
+  const loadLotteryDates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('lottery_dates')
+        .select('*')
+        .order('date');
+      
+      if (error) throw error;
+      setLotteryDates(data || []);
+    } catch (error) {
+      console.error('Error loading lottery dates:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,15 +96,6 @@ export default function LoteriasAdmin() {
         donation_price: parseFloat(formData.donation_price),
         prize_amount: formData.prize_amount ? parseFloat(formData.prize_amount) : null
       };
-
-      console.log('Form data:', formData);
-      console.log('Lottery data:', lotteryData);
-      console.log('Editing lottery:', editingLottery);
-      console.log('Supabase client:', supabase);
-
-      if (!supabase) {
-        throw new Error('Supabase client is not available');
-      }
 
       if (editingLottery) {
         const { error } = await supabase
@@ -107,15 +114,10 @@ export default function LoteriasAdmin() {
 
       resetForm();
       setShowForm(false);
-      
-      // Recargar datos para ver los cambios
-      await refreshLotteryDates();
+      loadLotteryDates();
     } catch (error) {
       console.error('Error saving lottery:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error message:', error?.message);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      alert('Error al guardar el sorteo: ' + (error as Error)?.message || 'Error desconocido');
+      alert('Error al guardar el sorteo');
     } finally {
       setSubmitting(false);
     }
@@ -191,27 +193,24 @@ export default function LoteriasAdmin() {
     if (!lottery.name) {
       const date = new Date(lottery.date);
       const day = date.getDate();
-      
-      // Usar traducciones de meses del i18n
-      const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 
-                        'july', 'august', 'september', 'october', 'november', 'december'];
-      const month = t(monthKeys[date.getMonth()]);
+      const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+      const month = monthNames[date.getMonth()];
       const year = date.getFullYear();
       
-      return t('language') === 'va' 
-        ? `Sorteig ${day} - ${month} de ${year}`
-        : `Sorteo ${day} - ${month} de ${year}`;
+      if (t('language') === 'va') {
+        return `Sorteig ${day} - ${month} de ${year}`;
+      } else {
+        return `Sorteo ${day} - ${month} de ${year}`;
+      }
     }
     return lottery.name;
   };
 
   const groupLotteriesByMonth = (lotteries: LotteryDate[]) => {
     const months: { [key: string]: LotteryDate[] } = {};
-    
-    // Usar traducciones de meses del i18n
-    const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 
-                      'july', 'august', 'september', 'october', 'november', 'december'];
-    const monthNames = monthKeys.map(key => t(key));
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     
     lotteries.forEach(lottery => {
       const date = new Date(lottery.date);
@@ -275,8 +274,8 @@ export default function LoteriasAdmin() {
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
-              <CurrencyDollarIcon className="h-8 w-8 mr-3" style={{color: 'rgb(48,80,105)'}} />
-              <h1 className="text-3xl font-bold" style={{color: 'rgb(48,80,105)'}}>
+              <TrophyIcon className="h-8 w-8 text-blue-600 mr-3" />
+              <h1 className="text-3xl font-bold text-blue-800">
                 {t('lottery_admin_title')}
               </h1>
             </div>
@@ -422,10 +421,7 @@ export default function LoteriasAdmin() {
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      resetForm();
-                      setShowForm(false);
-                    }}
+                    onClick={resetForm}
                     className="px-6 py-2 border border-blue-300 rounded-lg text-blue-700 hover:bg-blue-50"
                   >
                     {t('lottery_cancel')}
@@ -456,13 +452,14 @@ export default function LoteriasAdmin() {
                       <h3 className="text-lg font-semibold text-blue-600">{month}</h3>
                       <p className="text-sm text-black">
                         {lotteries.length} {lotteries.length === 1 ? t('lotteriesCount') : t('lotteriesCountPlural')}
+                        {lotteries.some(l => l.name) && ` ${t('activeLotteries')}`}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {lotteries.filter(l => l.name).length > 0 && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
-                        {lotteries.filter(l => l.name).length} {t('lotteriesCountPlural')}
+                        {lotteries.filter(l => l.name).length} {t('active')}
                       </span>
                     )}
                     <span className="text-blue-400">
@@ -522,10 +519,12 @@ export default function LoteriasAdmin() {
                                   <span>{t('lottery_total')}:</span>
                                   <span>€{calculateTotal(lottery)}</span>
                                 </div>
-                                <div className="flex justify-between pt-2 border-t font-semibold text-green-600">
-                                  <span>{t('lottery_prize_amount')}:</span>
-                                  <span>€{lottery.prize_amount ? lottery.prize_amount.toFixed(2) : '0.00'}</span>
-                                </div>
+                                {lottery.prize_amount && lottery.prize_amount > 0 && (
+                                  <div className="flex justify-between pt-2 border-t font-semibold text-green-600">
+                                    <span>{t('lottery_prize_amount')}:</span>
+                                    <span>€{lottery.prize_amount.toFixed(2)}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -547,7 +546,7 @@ export default function LoteriasAdmin() {
                                 className="text-green-600 hover:text-green-800 p-1"
                                 title={t('lottery_prize_amount')}
                               >
-                                <CurrencyDollarIcon className="h-4 w-4" />
+                                <TrophyIcon className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => deleteLottery(lottery)}
@@ -569,7 +568,7 @@ export default function LoteriasAdmin() {
 
           {lotteryDates.length === 0 && (
             <div className="text-center py-12">
-              <CurrencyDollarIcon className="h-16 w-16 mx-auto mb-4" style={{color: 'rgb(48,80,105)'}} />
+              <TrophyIcon className="h-16 w-16 text-black mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-black mb-2">
                 {t('lottery.no_lotteries')}
               </h3>

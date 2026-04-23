@@ -15,9 +15,6 @@ import Noticias from './pages/Noticias';
 import Cuotas from './pages/Cuotas';
 import Loterias from './pages/Loterias';
 import LoteriasUser from './pages/LoteriasUser';
-import LoteriasTest from './pages/LoteriasTest';
-import LoteriasTestSimple from './pages/LoteriasTestSimple';
-import LoteriasTestUnprotected from './pages/LoteriasTestUnprotected';
 import Eventos from './pages/Eventos';
 import Documentos from './pages/Documentos';
 import Crear from './pages/Crear';
@@ -102,28 +99,7 @@ function AppWithAuth() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/loterias-test" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <LoteriasTest />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/loterias-simple" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <LoteriasTestSimple />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/loterias-unprotected" element={
-                <Layout>
-                  <LoteriasTestUnprotected />
-                </Layout>
-              } />
-              
+                            
                             
               <Route path="/configuracion/permisos" element={
                 <ProtectedRoute>

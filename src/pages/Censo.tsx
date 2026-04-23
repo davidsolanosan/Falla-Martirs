@@ -8,7 +8,7 @@ import { FamilyQuotaModal } from '../components/forms/FamilyQuotaModal';
 import { ImportCensusModal } from '../components/admin/ImportCensusModal';
 import { RoleManagement } from '../components/admin/RoleManagement';
 import { MasterAdminInit } from '../components/admin/MasterAdminInit';
-import { FamilyManagementModal } from '../components/forms/FamilyManagementModal';
+import FamilyManagementModal from '../components/forms/FamilyManagementModal';
 import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash } from 'lucide-react';
 
 export default function Censo() {
