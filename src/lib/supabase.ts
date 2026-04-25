@@ -17,6 +17,7 @@ export interface User {
   phone: string;
   role: 'user' | 'admin' | 'master_admin';
   family_id?: string;
+  category_id?: string; // Referencia a la categoría del fallero
   // Campos adicionales del CSV
   codigo_jcf?: string;
   numero_censo?: string;
@@ -36,6 +37,12 @@ export interface Family {
   name: string;
   address: string;
   phone: string;
+  ticket_start?: number; // Numeración inicial de papeletas
+  ticket_end?: number; // Numeración final de papeletas
+  ordinary_tickets?: number; // Papeletas sorteos ordinarios (49)
+  christmas_tickets?: number; // Papeletas Lotería Navidad
+  child_tickets?: number; // Papeletas Lotería Niño
+  horta_tickets?: number; // Papeletas Lotería Horta Nord
   created_at: string;
   updated_at: string;
 }
@@ -90,10 +97,15 @@ export interface LotteryDate {
   date: string; // YYYY-MM-DD format
   name: string;
   special: boolean;
+  lottery_type: 'ordinary' | 'christmas' | 'child' | 'horta'; // Tipo de sorteo
   lottery_price: number; // Precio de lotería (0.50 ordinario, 2.50 especial)
   primitive_price?: number; // Precio de primitiva (0.30 ordinario, null especial)
   donation_price: number; // Precio de donación (0.20 ordinario, 0.50 especial)
   prize_amount?: number; // Cantidad premiada total del sorteo
+  ordinary_benefit?: number; // Beneficio por papeleta ordinaria
+  christmas_benefit?: number; // Beneficio por papeleta Navidad
+  child_benefit?: number; // Beneficio por papeleta Niño
+  horta_benefit?: number; // Beneficio por papeleta Horta Nord
   created_at: string;
   updated_at: string;
 }
