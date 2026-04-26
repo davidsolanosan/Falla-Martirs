@@ -12,7 +12,7 @@ import FamilyManagementModal from '../components/forms/FamilyManagementModal';
 import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash } from 'lucide-react';
 
 export default function Censo() {
-  const { families, categories, users } = useSupabase(); // Datos de Supabase
+  const { families, categories, users, updateFamily, deleteFamily, familyRepresentatives, setRepresentatives } = useSupabase(); // Datos de Supabase
   const { user } = useAuth(); // Usuario de AuthContext
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'usuarios' | 'familias'>('usuarios');
@@ -127,6 +127,36 @@ export default function Censo() {
       id: family.id,
       name: family.name
     });
+  };
+
+  const handleUpdateFamily = async (familyId: string, updates: any) => {
+    try {
+      console.log('🔄 handleUpdateFamily called with:', { familyId, updates });
+      await updateFamily(familyId, updates);
+      console.log('✅ Familia actualizada correctamente');
+      
+      // Actualizar el estado local con los datos enviados
+      if (familyToManage && familyToManage.id === familyId) {
+        setFamilyToManage(prev => ({
+          ...prev,
+          ...updates
+        }));
+        console.log('✅ familyToManage actualizado localmente');
+      }
+    } catch (error) {
+      console.error('❌ Error updating family:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteFamilyModal = async (familyId: string) => {
+    try {
+      await deleteFamily(familyId);
+      console.log('Familia eliminada correctamente');
+    } catch (error) {
+      console.error('Error deleting family:', error);
+      throw error;
+    }
   };
 
   const confirmDelete = async () => {
@@ -501,7 +531,16 @@ export default function Censo() {
 
       <UserFormModal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} userToEdit={userToEdit} />
       <FamilyFormModal isOpen={isFamilyModalOpen} onClose={() => setIsFamilyModalOpen(false)} familyToEdit={familyToEdit} />
-      <FamilyManagementModal isOpen={isFamilyManagementOpen} onClose={() => setIsFamilyManagementOpen(false)} family={familyToManage} />
+      <FamilyManagementModal 
+        isOpen={isFamilyManagementOpen} 
+        onClose={() => setIsFamilyManagementOpen(false)} 
+        family={familyToManage} 
+        users={users} 
+        familyRepresentatives={familyRepresentatives}
+        onUpdate={handleUpdateFamily}
+        onDelete={handleDeleteFamilyModal}
+        onSetRepresentatives={setRepresentatives}
+      />
                   <ImportCensusModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
       
       {/* Modal de confirmación de eliminación */}

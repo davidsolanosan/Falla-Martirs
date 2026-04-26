@@ -18,6 +18,7 @@ interface Family {
   address?: string;
   phone?: string;
   representativeIds?: string[];
+  representative_id?: string; // Nuevo campo para el representante principal
 }
 
 interface FamilyManagementModalProps {
@@ -25,8 +26,10 @@ interface FamilyManagementModalProps {
   onClose: () => void;
   family: Family | null;
   users: User[];
-  onUpdate: (family: Family) => Promise<void>;
+  familyRepresentatives: {family_id: string, user_id: string}[];
+  onUpdate: (familyId: string, updates: Partial<Family>) => Promise<void>;
   onDelete: (familyId: string) => Promise<void>;
+  onSetRepresentatives: (familyId: string, userIds: string[]) => Promise<void>;
 }
 
 function FamilyManagementModal({ 
@@ -34,8 +37,10 @@ function FamilyManagementModal({
   onClose, 
   family, 
   users, 
+  familyRepresentatives,
   onUpdate, 
-  onDelete 
+  onDelete,
+  onSetRepresentatives 
 }: FamilyManagementModalProps) {
   const { t } = useTranslation();
   
@@ -50,31 +55,52 @@ function FamilyManagementModal({
 
   useEffect(() => {
     if (family) {
+      console.log('🔄 Updating modal with family data:', family);
       setFormData({
         name: family.name,
         address: family.address,
         phone: family.phone
       });
-      setSelectedRepresentatives(family.representativeIds || []);
       
-      const familyMembers = users.filter(user => user.family_id === family.id);
+      // Cargar representantes desde la nueva tabla
+      const reps = familyRepresentatives
+        .filter(r => r.family_id === family.id)
+        .map(r => r.user_id);
+      setSelectedRepresentatives(reps);
+      
+      const familyMembers = (users || []).filter(user => user.family_id === family.id);
       setAvailableUsers(familyMembers);
     }
-  }, [family, users]);
+  }, [family, users, familyRepresentatives]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!family) return;
     
     try {
-      await onUpdate(family.id, {
+      const updates: any = {
         name: formData.name || family.name,
         address: formData.address || family.address,
         phone: formData.phone || family.phone
-      });
-      onClose();
+      };
+      
+      // Guardar datos básicos de la familia
+      console.log('📝 Updates to save:', updates);
+      console.log('� Family ID:', family.id);
+      await onUpdate(family.id, updates);
+      
+      // Guardar representantes en la nueva tabla
+      console.log('� Saving representatives:', selectedRepresentatives);
+      await onSetRepresentatives(family.id, selectedRepresentatives);
+      console.log('✅ Update completed successfully');
+      
+      // Pequeño retraso para que los cambios sean visibles antes de cerrar
+      setTimeout(() => {
+        console.log('🚪 Closing modal after delay');
+        onClose();
+      }, 500);
     } catch (error) {
-      console.error("Error updating family:", error);
+      console.error("❌ Error updating family:", error);
       alert("Error al actualizar familia. Revisa la consola para más detalles.");
     }
   };
@@ -101,7 +127,21 @@ function FamilyManagementModal({
     });
   };
 
+  const handleCloseModal = () => {
+    onClose();
+  };
+
+  // Función de prueba para acceder desde la consola
+  (window as any).testCloseModal = () => {
+    handleCloseModal();
+  };
+
   if (!family) return null;
+
+  // No renderizar si el modal no está abierto (después de todos los hooks)
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -111,7 +151,7 @@ function FamilyManagementModal({
             {t('manageFamily')}: {family.name}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="h-5 w-5" />
@@ -157,6 +197,16 @@ function FamilyManagementModal({
               <Users className="h-5 w-5 mr-2" />
               {t('familyMembers')} ({availableUsers.length}) • {selectedRepresentatives.length} {t('representatives')}
             </h3>
+            {selectedRepresentatives.length > 0 && (
+              <div className="mb-3 p-2 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-800">
+                  {t('representatives')}: {selectedRepresentatives.map(repId => {
+                    const rep = availableUsers.find(u => u.id === repId);
+                    return rep ? `${rep.name} ${rep.surname || ''}` : '';
+                  }).filter(name => name).join(', ')}
+                </p>
+              </div>
+            )}
             
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {availableUsers.map(user => (
@@ -174,7 +224,11 @@ function FamilyManagementModal({
                   <button
                     type="button"
                     onClick={() => handleRepresentativeToggle(user.id)}
-                    className="p-2 rounded-lg transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      selectedRepresentatives.includes(user.id)
+                        ? 'bg-yellow-100 text-yellow-600'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    }`}
                   >
                     <Crown className="h-4 w-4" />
                   </button>
@@ -187,18 +241,25 @@ function FamilyManagementModal({
         <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
           <button
             type="button"
-            onClick={onClose}
-            className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] rounded-xl hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+            onClick={handleCloseModal}
+            className="inline-flex items-center px-4 py-2 bg-white text-[rgb(48,80,105)] border-2 border-[rgb(48,80,105)] rounded-lg hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
           >
-            Cancelar
+            {t('cancel')}
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="inline-flex items-center px-4 py-2 bg-[rgb(48,80,105)] text-white border-2 border-[rgb(48,80,105)] rounded-lg hover:bg-[rgb(48,80,105)] focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+          >
+            {t('save')}
           </button>
           <button
             type="button"
             onClick={handleDeleteFamily}
-            className="inline-flex items-center px-3 py-1.5 bg-white text-red-600 border-3 border-red-300 rounded-xl hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all text-sm font-medium"
+            className="inline-flex items-center px-4 py-2 bg-white text-red-600 border-2 border-red-300 rounded-lg hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all text-sm font-medium"
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Eliminar Familia
+            {t('deleteFamily')}
           </button>
         </div>
       </div>

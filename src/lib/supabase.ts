@@ -37,6 +37,7 @@ export interface Family {
   name: string;
   address: string;
   phone: string;
+  representative_id?: string; // ID del usuario representante de la familia
   ticket_start?: number; // Numeración inicial de papeletas
   ticket_end?: number; // Numeración final de papeletas
   ordinary_tickets?: number; // Papeletas sorteos ordinarios (49)
@@ -146,4 +147,39 @@ export interface AuditLog {
   action: string;
   details: any;
   created_at: string;
+}
+
+// Eventos
+export interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  image_url?: string;
+  event_date: string;
+  registration_deadline: string;
+  is_active: boolean;
+  includes_meal: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventPrice {
+  id: string;
+  event_id: string;
+  category_id: string;
+  price: number;
+  includes_meal: boolean;
+  created_at: string;
+}
+
+export interface EventRegistration {
+  id: string;
+  event_id: string;
+  user_id: string;
+  family_id: string;
+  category_id: string;
+  includes_meal: boolean;
+  total_price: number;
+  registered_by?: string; // ID del usuario que inscribió (representante)
+  registered_at: string;
 }

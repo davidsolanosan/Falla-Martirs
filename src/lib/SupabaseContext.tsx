@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration } from './supabase';
 
 interface SupabaseContextType {
   user: User | null;
@@ -11,6 +11,10 @@ interface SupabaseContextType {
   lotteryDates: LotteryDate[];
   lotteryTickets: LotteryTicket[];
   lotteryPrizes: LotteryPrize[];
+  events: Event[];
+  eventPrices: EventPrice[];
+  eventRegistrations: EventRegistration[];
+  familyRepresentatives: {family_id: string, user_id: string}[];
   loading: boolean;
   error: string | null;
   
@@ -45,6 +49,18 @@ interface SupabaseContextType {
   updateLotteryPrize: (id: string, prize: Partial<LotteryPrize>) => Promise<void>;
   deleteLotteryPrize: (id: string) => Promise<void>;
   
+  // Event CRUD functions
+  createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => Promise<Event>;
+  updateEvent: (id: string, event: Partial<Event>) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  createEventPrice: (price: Omit<EventPrice, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateEventPrice: (id: string, price: Partial<EventPrice>) => Promise<void>;
+  deleteEventPrice: (id: string) => Promise<void>;
+  createEventRegistration: (registration: Omit<EventRegistration, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateEventRegistration: (id: string, registration: Partial<EventRegistration>) => Promise<void>;
+  deleteEventRegistration: (id: string) => Promise<void>;
+  setRepresentatives: (familyId: string, userIds: string[]) => Promise<void>;
+  
   // Refresh functions
   refreshFamilies: () => Promise<void>;
   refreshUsers: () => Promise<void>;
@@ -54,6 +70,9 @@ interface SupabaseContextType {
   refreshLotteryDates: () => Promise<void>;
   refreshLotteryTickets: () => Promise<void>;
   refreshLotteryPrizes: () => Promise<void>;
+  refreshEvents: () => Promise<void>;
+  refreshEventPrices: () => Promise<void>;
+  refreshEventRegistrations: () => Promise<void>;
 }
 
 export const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -68,6 +87,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [lotteryDates, setLotteryDates] = useState<LotteryDate[]>([]);
   const [lotteryTickets, setLotteryTickets] = useState<LotteryTicket[]>([]);
   const [lotteryPrizes, setLotteryPrizes] = useState<LotteryPrize[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [eventPrices, setEventPrices] = useState<EventPrice[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
+  const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,14 +174,25 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const updateFamily = async (id: string, family: Partial<Family>) => {
     try {
-      const { error } = await supabase
+      console.log('🗄️ updateFamily called with:', { id, family });
+      const { data, error } = await supabase
         .from('families')
         .update(family)
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Supabase update successful:', data);
       await refreshFamilies();
+      console.log('✅ Families refreshed');
+      return data;
     } catch (err) {
+      console.error('❌ updateFamily error:', err);
       setError(err instanceof Error ? err.message : 'Error al actualizar familia');
       throw err;
     }
@@ -648,6 +682,265 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Refresh functions for Events
+  const refreshEvents = async () => {
+    try {
+      console.log('Loading events...');
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading events:', error);
+        setEvents([]);
+        throw error;
+      }
+      console.log('Events loaded:', data);
+      setEvents(data || []);
+    } catch (err) {
+      console.error('Exception loading events:', err);
+      setEvents([]);
+      throw err;
+    }
+  };
+
+  const refreshEventPrices = async () => {
+    try {
+      console.log('Loading event prices...');
+      const { data, error } = await supabase
+        .from('event_prices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading event prices:', error);
+        setEventPrices([]);
+        throw error;
+      }
+      console.log('Event prices loaded:', data);
+      setEventPrices(data || []);
+    } catch (err) {
+      console.error('Exception loading event prices:', err);
+      setEventPrices([]);
+      throw err;
+    }
+  };
+
+  const refreshEventRegistrations = async () => {
+    try {
+      console.log('Loading event registrations...');
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .select('*')
+        .order('registered_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading event registrations:', error);
+        setEventRegistrations([]);
+        throw error;
+      }
+      console.log('Event registrations loaded:', data);
+      setEventRegistrations(data || []);
+    } catch (err) {
+      console.error('Exception loading event registrations:', err);
+      setEventRegistrations([]);
+      throw err;
+    }
+  };
+
+  const refreshFamilyRepresentatives = async () => {
+    try {
+      console.log('Loading family representatives...');
+      const { data, error } = await supabase
+        .from('family_representatives')
+        .select('*');
+      
+      if (error) {
+        console.error('Error loading family representatives:', error);
+        setFamilyRepresentatives([]);
+        throw error;
+      }
+      console.log('Family representatives loaded:', data);
+      setFamilyRepresentatives(data || []);
+    } catch (err) {
+      console.error('Exception loading family representatives:', err);
+      setFamilyRepresentatives([]);
+      throw err;
+    }
+  };
+
+  // CRUD functions for Events
+  const createEvent = async (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>): Promise<Event> => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .insert([event])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshEvents();
+      return data;
+    } catch (err) {
+      console.error('Error creating event:', err);
+      throw err;
+    }
+  };
+
+  const updateEvent = async (id: string, event: Partial<Event>) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update(event)
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEvents();
+    } catch (err) {
+      console.error('Error updating event:', err);
+      throw err;
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEvents();
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      throw err;
+    }
+  };
+
+  const createEventPrice = async (price: Omit<EventPrice, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_prices')
+        .insert([price])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshEventPrices();
+      return data;
+    } catch (err) {
+      console.error('Error creating event price:', err);
+      throw err;
+    }
+  };
+
+  const updateEventPrice = async (id: string, price: Partial<EventPrice>) => {
+    try {
+      const { error } = await supabase
+        .from('event_prices')
+        .update(price)
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEventPrices();
+    } catch (err) {
+      console.error('Error updating event price:', err);
+      throw err;
+    }
+  };
+
+  const deleteEventPrice = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('event_prices')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEventPrices();
+    } catch (err) {
+      console.error('Error deleting event price:', err);
+      throw err;
+    }
+  };
+
+  const createEventRegistration = async (registration: Omit<EventRegistration, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_registrations')
+        .insert([registration])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshEventRegistrations();
+      return data;
+    } catch (err) {
+      console.error('Error creating event registration:', err);
+      throw err;
+    }
+  };
+
+  const updateEventRegistration = async (id: string, registration: Partial<EventRegistration>) => {
+    try {
+      const { error } = await supabase
+        .from('event_registrations')
+        .update(registration)
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEventRegistrations();
+    } catch (err) {
+      console.error('Error updating event registration:', err);
+      throw err;
+    }
+  };
+
+  const deleteEventRegistration = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('event_registrations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshEventRegistrations();
+    } catch (err) {
+      console.error('Error deleting event registration:', err);
+      throw err;
+    }
+  };
+
+  const setRepresentatives = async (familyId: string, userIds: string[]) => {
+    try {
+      console.log('Setting representatives for family:', familyId, userIds);
+      
+      // Borrar los actuales
+      const { error: deleteError } = await supabase
+        .from('family_representatives')
+        .delete()
+        .eq('family_id', familyId);
+      
+      if (deleteError) throw deleteError;
+      
+      // Insertar los nuevos
+      if (userIds.length > 0) {
+        const { error: insertError } = await supabase
+          .from('family_representatives')
+          .insert(userIds.map(userId => ({ family_id: familyId, user_id: userId })));
+        
+        if (insertError) throw insertError;
+      }
+      
+      await refreshFamilyRepresentatives();
+      console.log('✅ Representatives updated successfully');
+    } catch (err) {
+      console.error('Error setting representatives:', err);
+      throw err;
+    }
+  };
+
   // Refresh functions
   const refreshFamilies = async () => {
     try {
@@ -762,6 +1055,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshLotteryDates(), // AÑADIDO: cargar fechas de lotería
           refreshLotteryTickets(), // AÑADIDO: cargar papeletas de lotería
           refreshLotteryPrizes(), // AÑADIDO: cargar premios de lotería
+          refreshEvents(), // AÑADIDO: cargar eventos
+          refreshEventPrices(), // AÑADIDO: cargar precios de eventos
+          refreshEventRegistrations(), // AÑADIDO: cargar inscripciones de eventos
+          refreshFamilyRepresentatives(), // AÑADIDO: cargar representantes de familias
         ]);
         
         // Check current auth state - DESHABILITADO para evitar conflictos con AuthContext
@@ -828,6 +1125,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     lotteryDates,
     lotteryTickets,
     lotteryPrizes,
+    events,
+    eventPrices,
+    eventRegistrations,
+    familyRepresentatives,
     loading,
     error,
     signIn,
@@ -857,6 +1158,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     createLotteryPrize,
     updateLotteryPrize,
     deleteLotteryPrize,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    createEventPrice,
+    updateEventPrice,
+    deleteEventPrice,
+    createEventRegistration,
+    updateEventRegistration,
+    deleteEventRegistration,
+    setRepresentatives,
     refreshFamilies,
     refreshUsers,
     refreshCategories,
@@ -865,6 +1176,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshLotteryDates,
     refreshLotteryTickets,
     refreshLotteryPrizes,
+    refreshEvents,
+    refreshEventPrices,
+    refreshEventRegistrations,
   };
 
   return (

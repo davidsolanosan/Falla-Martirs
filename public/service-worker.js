@@ -37,6 +37,9 @@ self.addEventListener('activate', event => {
 
 // Estrategia de Cache: Network First con fallback
 self.addEventListener('fetch', event => {
+  // Solo interceptar peticiones GET (evitar error con PATCH/POST/PUT/DELETE)
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     fetch(event.request)
       .then(response => {

@@ -40,7 +40,7 @@ export default function Inici() {
       color: 'from-green-500 to-green-600',
       bgColor: 'bg-green-50',
       iconColor: 'text-green-600',
-      route: '/quotes'
+      route: '/cuotas'
     },
     {
       id: 'loteria',
