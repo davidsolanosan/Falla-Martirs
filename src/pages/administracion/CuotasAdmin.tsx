@@ -29,6 +29,18 @@ export default function CuotasAdmin() {
       console.log('Campos de la categoría:', Object.keys(categories[0]));
     }
     
+    // Asignar categorías automáticamente si hay usuarios y categorías
+    console.log('🔍 Verificando asignación automática:');
+    console.log('🔍 Users length:', users.length);
+    console.log('🔍 Categories length:', categories.length);
+    
+    if (users.length > 0 && categories.length > 0) {
+      console.log('🔍 Ejecutando assignCategoriesByAge automáticamente...');
+      assignCategoriesByAge();
+    } else {
+      console.log('🔍 No se ejecuta assignCategoriesByAge - faltan usuarios o categorías');
+    }
+    
     setLoading(false);
   }, [families, users, categories, lotteryDates]);
 
@@ -101,13 +113,29 @@ export default function CuotasAdmin() {
     return category;
   };
 
-  const assignCategoriesByAge = () => {
+  const assignCategoriesByAge = async () => {
     console.log('Asignando categorías por edad a todos los usuarios...');
     
     users.forEach((user: any) => {
-      const birthYear = parseInt(user.birth_year);
+      let birthYear: number;
+      
+      // Manejar formato DD/MM/YYYY o YYYY
+      if (user.birth_year.includes('/')) {
+        // Formato DD/MM/YYYY - extraer el año
+        const parts = user.birth_year.split('/');
+        if (parts.length === 3) {
+          birthYear = parseInt(parts[2]);
+        } else {
+          console.log('Formato de birth_year inválido:', user.birth_year, user.name);
+          return;
+        }
+      } else {
+        // Formato YYYY
+        birthYear = parseInt(user.birth_year);
+      }
+      
       if (isNaN(birthYear)) {
-        console.log('Usuario sin birth_year válido:', user.name);
+        console.log('Usuario sin birth_year válido:', user.name, user.birth_year);
         return;
       }
       
@@ -119,11 +147,19 @@ export default function CuotasAdmin() {
       );
       
       if (category) {
-        console.log(`Asignando categoría "${category.name}" (€${category.quotaamount}) a ${user.name} (${age} años)`);
-        // Aquí podrías llamar a updateUser para guardar category_id
-        // updateUser(user.id, { category_id: category.id });
+        console.log(`✅ Asignando categoría "${category.name}" (${category.id}) a ${user.name} (${age} años)`);
+        console.log(`🔧 Actualizando usuario ${user.id} con category_id: ${category.id}`);
+        
+        // Actualizar category_id en la base de datos
+        updateUser(user.id, { category_id: category.id })
+          .then(() => {
+            console.log(`✅ Categoría actualizada correctamente para ${user.name}`);
+          })
+          .catch((error) => {
+            console.error(`❌ Error al actualizar categoría para ${user.name}:`, error);
+          });
       } else {
-        console.log('No se encontró categoría para:', user.name, 'Edad:', age);
+        console.log('❌ No se encontró categoría para:', user.name, 'Edad:', age);
       }
     });
   };

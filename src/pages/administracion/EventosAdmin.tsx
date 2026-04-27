@@ -17,7 +17,9 @@ export default function EventosAdmin() {
     event_date: '',
     registration_deadline: '',
     is_active: true,
-    includes_meal: true
+    includes_meal: true,
+    site: '',
+    time: ''
   });
   const [priceForm, setPriceForm] = useState<{ [key: string]: number }>({});
 
@@ -50,14 +52,51 @@ export default function EventosAdmin() {
 
   const handleSaveEvent = async () => {
     try {
+      console.log('🔍 handleSaveEvent iniciando...');
+      console.log('🔍 formData completo:', formData);
+      console.log('🔍 editingEvent:', editingEvent);
+      
       let savedEventId: string;
 
       if (editingEvent) {
-        await updateEvent(editingEvent.id, formData);
+        console.log('🔍 Intentando actualizar evento con todos los datos:', formData);
+        
+        try {
+          // Intentar guardar con site y time
+          await updateEvent(editingEvent.id, formData);
+          console.log('✅ Evento actualizado correctamente con site y time');
+        } catch (error) {
+          // Si falla por columnas inexistentes, omitir site y time
+          if (error.code === 'PGRST204' && error.message.includes('site')) {
+            console.log('⚠️ Columnas site/time no existen, guardando sin ellas');
+            const { site, time, ...eventData } = formData;
+            await updateEvent(editingEvent.id, eventData);
+            console.log('✅ Evento actualizado correctamente sin site y time');
+          } else {
+            throw error; // Otro error, propagar
+          }
+        }
         savedEventId = editingEvent.id;
       } else {
-        const newEvent = await createEvent(formData);
-        savedEventId = newEvent.id;
+        console.log('🔍 Intentando crear evento con todos los datos:', formData);
+        
+        try {
+          // Intentar crear con site y time
+          const newEvent = await createEvent(formData);
+          console.log('✅ Evento creado correctamente con site y time');
+          savedEventId = newEvent.id;
+        } catch (error) {
+          // Si falla por columnas inexistentes, omitir site y time
+          if (error.code === 'PGRST204' && error.message.includes('site')) {
+            console.log('⚠️ Columnas site/time no existen, creando sin ellas');
+            const { site, time, ...eventData } = formData;
+            const newEvent = await createEvent(eventData);
+            console.log('✅ Evento creado correctamente sin site y time');
+            savedEventId = newEvent.id;
+          } else {
+            throw error; // Otro error, propagar
+          }
+        }
       }
       
       // Guardar precios por categoría
@@ -76,9 +115,11 @@ export default function EventosAdmin() {
         }
       }
       
+      console.log('🔍 Cerrando modal...');
       handleCloseModal();
+      console.log('✅ handleSaveEvent completado exitosamente');
     } catch (error) {
-      console.error('Error al guardar evento:', error);
+      console.error('❌ Error al guardar evento:', error);
     }
   };
 
@@ -91,7 +132,9 @@ export default function EventosAdmin() {
       event_date: event.event_date,
       registration_deadline: event.registration_deadline,
       is_active: event.is_active,
-      includes_meal: event.includes_meal
+      includes_meal: event.includes_meal,
+      site: event.site || '',
+      time: event.time || ''
     });
     
     // Cargar precios existentes
@@ -125,7 +168,9 @@ export default function EventosAdmin() {
       event_date: '',
       registration_deadline: '',
       is_active: true,
-      includes_meal: true
+      includes_meal: true,
+      site: '',
+      time: ''
     });
     setPriceForm({});
   };
@@ -423,6 +468,31 @@ export default function EventosAdmin() {
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {t('site')}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.site}
+                    onChange={(e) => setFormData({ ...formData, site: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    placeholder={t('sitePlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {t('time')}
+                  </label>
+                  <input
+                    type="time"
+                    value={formData.time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center space-x-6">
@@ -493,7 +563,10 @@ export default function EventosAdmin() {
                 {t('cancel')}
               </button>
               <button
-                onClick={handleSaveEvent}
+                onClick={() => {
+                  console.log('🔍 Botón Guardar clickeado');
+                  handleSaveEvent();
+                }}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
                 style={{ backgroundColor: 'rgb(48,80,105)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}

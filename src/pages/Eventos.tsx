@@ -2,33 +2,341 @@ import React, { useState } from 'react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../lib/i18n';
-import { CalendarDays, Plus, MapPin, Clock } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, X, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { es, ca } from 'date-fns/locale';
-import { EventFormModal } from '../components/forms/EventFormModal';
 
 export default function Eventos() {
   const { user } = useAuth();
   const { t, language } = useTranslation();
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const isAdmin = user?.role === 'admin' || user?.role === 'master_admin';
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [memberMeals, setMemberMeals] = useState({});
+  const { events, loading, users, families, eventPrices, createEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
   
   const dateLocale = language === 'va' ? ca : es;
-  const { events, loading } = useSupabase();
+
+  // Función para abrir modal de inscripción
+  const openRegistrationModal = (event) => {
+    console.log('🔍 Abriendo modal de inscripción para evento:', event);
+    setSelectedEvent(event);
+    setIsRegistrationModalOpen(true);
+  };
+
+  // Función para eliminar inscripción
+  const handleUnregister = async (memberId) => {
+    if (!selectedEvent) return;
+    
+    try {
+      const registration = eventRegistrations.find(
+        r => r.event_id === selectedEvent.id && r.user_id === memberId
+      );
+      
+      if (registration) {
+        await deleteEventRegistration(registration.id);
+        console.log('✅ Inscripción eliminada para:', memberId);
+      }
+    } catch (error) {
+      console.error('❌ Error al eliminar inscripción:', error);
+    }
+  };
+
+  // Función para manejar la inscripción
+  const handleRegister = async (selectedMembers, includesMeal) => {
+    if (!selectedEvent) return;
+
+    try {
+      // Obtener usuario completo y familia - igual que en el modal
+      const fullUser = users.find(u => u.id === user?.id);
+      const userFamily = families.find(f => f.id === fullUser?.family_id);
+      const familyMembers = users.filter(u => u.family_id === userFamily?.id);
+
+      console.log('🔍 handleRegister - fullUser:', fullUser);
+      console.log('🔍 handleRegister - userFamily:', userFamily);
+      console.log('🔍 handleRegister - familyMembers:', familyMembers);
+
+      // Registrar cada miembro seleccionado
+      for (const memberId of selectedMembers) {
+        const member = familyMembers.find(m => m.id === memberId);
+        console.log('🔍 Miembro seleccionado:', member);
+        console.log('🔍 category_id del miembro:', member?.category_id);
+        console.log('🔍 Todos los campos del miembro:', Object.keys(member || {}));
+        console.log('🔍 Valores completos del miembro:', JSON.stringify(member, null, 2));
+        
+        // También mostrar los precios disponibles para comparar
+        console.log('🔍 Precios disponibles:', eventPrices.map(p => ({
+          category_id: p.category_id,
+          price: p.price,
+          event_id: p.event_id
+        })));
+        console.log('🔍 Precios completos:', JSON.stringify(eventPrices, null, 2));
+        
+        // Verificar si el miembro tiene categoría asignada
+        let categoryId = member?.category_id;
+        
+        if (!categoryId) {
+          console.warn('⚠️ El miembro no tiene categoría asignada, usando categoría por defecto:', member?.name, member?.surname);
+          
+          // Usar la primera categoría disponible como por defecto
+          const defaultCategory = eventPrices[0]?.category_id;
+          if (!defaultCategory) {
+            console.error('❌ No hay categorías disponibles para este evento');
+            alert('No hay categorías configuradas para este evento. Por favor, configura los precios primero.');
+            continue;
+          }
+          
+          categoryId = defaultCategory;
+          console.log('🔧 Usando categoría por defecto:', categoryId);
+        }
+        
+        await createEventRegistration({
+          event_id: selectedEvent.id,
+          user_id: memberId,
+          family_id: userFamily?.id || '',
+          category_id: categoryId,
+          includes_meal: includesMeal,
+          total_price: 0, // Se calculará según el precio de la categoría
+          registered_by: user?.id || '',
+          registered_at: new Date().toISOString()
+        });
+      }
+
+      setIsRegistrationModalOpen(false);
+      setSelectedEvent(null);
+      
+      // Limpiar selección
+      setSelectedMembers([]);
+      setMemberMeals({});
+    } catch (error) {
+      console.error('Error al inscribir:', error);
+    }
+  };
+
+  // Componente modal de inscripción
+  const EventRegistrationModal = ({ event, onClose, onRegister }) => {
+    console.log('🔍 EventRegistrationModal renderizado con evento:', event);
+    const [selectedMembers, setSelectedMembers] = useState([]);
+    const [memberMeals, setMemberMeals] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Verificar si un miembro ya está inscrito
+    const isMemberRegistered = (memberId) => {
+      return eventRegistrations.some(r => r.event_id === event.id && r.user_id === memberId);
+    };
+
+    // Obtener familia y miembros - usar el usuario completo de SupabaseContext
+    const fullUser = users.find(u => u.id === user?.id);
+    const userFamily = families.find(f => f.id === fullUser?.family_id);
+    const familyMembers = users.filter(u => u.family_id === userFamily?.id);
+    
+    console.log('🔍 Datos del usuario (Auth):', user);
+    console.log('🔍 Datos del usuario (Completo):', fullUser);
+    console.log('🔍 Familia encontrada:', userFamily);
+    console.log('🔍 Miembros de la familia:', familyMembers);
+    console.log('🔍 Precios del evento:', eventPrices);
+
+    // Calcular coste total
+    const calculateTotal = () => {
+      let total = 0;
+      for (const memberId of selectedMembers) {
+        const member = familyMembers.find(m => m.id === memberId);
+        const price = eventPrices.find(p => p.event_id === event.id && p.category_id === member?.category_id);
+        total += price?.price || 0;
+        if (event.includes_meal && memberMeals[memberId]) {
+          total += 10; // Coste adicional por comida
+        }
+      }
+      return total;
+    };
+
+    const handleMemberToggle = (memberId) => {
+      if (selectedMembers.includes(memberId)) {
+        // Si se deselecciona, eliminar también la opción de comida
+        setSelectedMembers(selectedMembers.filter(id => id !== memberId));
+        setMemberMeals(prev => {
+          const newMeals = { ...prev };
+          delete newMeals[memberId];
+          return newMeals;
+        });
+      } else {
+        // Si se selecciona, añadir con opción de comida por defecto
+        setSelectedMembers([...selectedMembers, memberId]);
+        setMemberMeals(prev => ({
+          ...prev,
+          [memberId]: event.includes_meal // Por defecto marcado si el evento incluye comida
+        }));
+      }
+    };
+
+    const handleMealToggle = (memberId) => {
+      setMemberMeals(prev => ({
+        ...prev,
+        [memberId]: !prev[memberId]
+      }));
+    };
+
+    const handleSubmit = async () => {
+      if (selectedMembers.length === 0) return;
+      
+      setIsSubmitting(true);
+      
+      // Enviar cada miembro con su opción de comida individual
+      for (const memberId of selectedMembers) {
+        await onRegister([memberId], memberMeals[memberId] || false);
+      }
+      
+      setIsSubmitting(false);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-3xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-slate-800">{t('registerForEvent')}</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="mb-6">
+            <h4 className="font-semibold text-slate-700 mb-3">{t('selectFamilyMembers')}</h4>
+            {!userFamily ? (
+              <div className="text-center py-8 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="text-amber-600 mb-2">
+                  <Users className="w-12 h-12 mx-auto mb-2" />
+                </div>
+                <h3 className="text-lg font-semibold text-amber-800 mb-2">
+                  {t('noFamilyAssigned')}
+                </h3>
+                <p className="text-amber-700">
+                  {t('noFamilyDescription')}
+                </p>
+              </div>
+            ) : familyMembers.length === 0 ? (
+              <div className="text-center py-8 bg-blue-50 border border-blue-200 rounded-xl">
+                <div className="text-blue-600 mb-2">
+                  <Users className="w-12 h-12 mx-auto mb-2" />
+                </div>
+                <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                  {t('noFamilyMembers')}
+                </h3>
+                <p className="text-blue-700">
+                  {t('noFamilyMembersDescription')}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {familyMembers.map(member => {
+                  const isRegistered = isMemberRegistered(member.id);
+                  const isSelected = selectedMembers.includes(member.id);
+                  const categoryPrice = eventPrices.find(p => p.event_id === event.id && p.category_id === member.category_id);
+                  
+                  return (
+                    <div key={member.id} className={`border rounded-xl p-4 transition-colors ${
+                      isRegistered ? 'bg-green-50 border-green-200' : 'hover:bg-slate-50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          {!isRegistered ? (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleMemberToggle(member.id)}
+                              className="mr-3 h-5 w-5 text-[rgb(48,80,105)] rounded focus:ring-[rgb(48,80,105)]"
+                            />
+                          ) : (
+                            <div className="mr-3 h-5 w-5 bg-green-500 rounded flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium text-lg">{member.name} {member.surname}</p>
+                            <p className="text-sm text-slate-500">
+                              {isRegistered ? '✅ ' : ''}{categoryPrice?.price || 0}€
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {isRegistered ? (
+                            <button
+                              onClick={() => handleUnregister(member.id)}
+                              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                            >
+                              {t('unregister')}
+                            </button>
+                          ) : isSelected && (
+                            <p className="text-sm font-medium text-slate-600">
+                              {categoryPrice?.price || 0}€
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                  
+                  {selectedMembers.includes(member.id) && event.includes_meal && (
+                    <div className="ml-8 p-3 bg-slate-50 rounded-lg">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={memberMeals[member.id] || false}
+                          onChange={() => handleMealToggle(member.id)}
+                          className="mr-3 h-4 w-4 text-[rgb(48,80,105)] rounded focus:ring-[rgb(48,80,105)]"
+                        />
+                        <div>
+                          <p className="font-medium text-sm">{t('includeMeal')}</p>
+                          <p className="text-xs text-slate-500">{t('mealDescription')} (+10€)</p>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <span className="text-lg font-semibold">{t('total')}:</span>
+                <p className="text-sm text-slate-500">
+                  {selectedMembers.length} {selectedMembers.length === 1 ? 'persona' : 'personas'}
+                  {event.includes_meal && selectedMembers.some(id => memberMeals[id]) && 
+                    ` • ${selectedMembers.filter(id => memberMeals[id]).length} con comida`
+                  }
+                </p>
+              </div>
+              <span className="text-2xl font-bold text-[rgb(48,80,105)]">€{calculateTotal()}</span>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 border-3 border-[rgb(48,80,105)] text-[rgb(48,80,105)] rounded-xl font-medium hover:bg-slate-50 transition-all"
+              >
+                {t('cancel')}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={selectedMembers.length === 0 || isSubmitting}
+                className="flex-1 px-4 py-3 bg-[rgb(48,80,105)] text-white rounded-xl font-medium hover:bg-[rgb(48,80,105)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isSubmitting ? t('registering') : t('register')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{t('navEvents')}</h2>
-        {isAdmin && (
-          <button 
-            onClick={() => setIsEventModalOpen(true)}
-            className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {t('createEvent')}
-          </button>
-        )}
       </div>
 
       {loading ? (
@@ -79,10 +387,18 @@ export default function Eventos() {
                 )}
                 
                 <div className="space-y-2 mb-6">
-                  <div className="flex items-center text-sm text-slate-600">
-                    <Clock className="w-4 h-4 mr-2 text-slate-400" />
-                    {format(date, 'HH:mm')} h
-                  </div>
+                  {event.time && (
+                    <div className="flex items-center text-sm text-slate-600">
+                      <Clock className="w-4 h-4 mr-2 text-slate-400" />
+                      {event.time}
+                    </div>
+                  )}
+                  {event.site && (
+                    <div className="flex items-center text-sm text-slate-600">
+                      <MapPin className="w-4 h-4 mr-2 text-slate-400" />
+                      {event.site}
+                    </div>
+                  )}
                   {event.registration_deadline && (
                     <div className="flex items-center text-sm text-slate-600">
                       <CalendarDays className="w-4 h-4 mr-2 text-slate-400" />
@@ -101,12 +417,11 @@ export default function Eventos() {
                       {event.is_active ? t('active') : t('inactive')}
                     </span>
                   </div>
-                  {isAdmin ? (
-                    <button className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-4 py-2 rounded-xl transition-all">
-                      {t('manageEvent')}
-                    </button>
-                  ) : user?.isFamilyAdmin ? (
-                    <button className="text-sm font-medium text-white bg-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)] px-4 py-2 rounded-xl transition-all">
+                  {user ? (
+                    <button 
+                      onClick={() => openRegistrationModal(event)}
+                      className="text-sm font-medium text-white bg-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)] px-4 py-2 rounded-xl transition-all"
+                    >
                       {t('join')}
                     </button>
                   ) : (
@@ -115,7 +430,7 @@ export default function Eventos() {
                         {t('join')}
                       </button>
                       <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-[rgb(48,80,105)] text-white text-xs rounded-xl text-center z-10 shadow-lg hidden group-hover:block">
-                        {t('onlyFamilyAdmins')}
+                        {t('loginToViewEvents')}
                       </div>
                     </div>
                   )}
@@ -126,7 +441,17 @@ export default function Eventos() {
         })}
       </div>
       )}
-      <EventFormModal isOpen={isEventModalOpen} onClose={() => setIsEventModalOpen(false)} />
+
+      {isRegistrationModalOpen && selectedEvent && (
+        <EventRegistrationModal
+          event={selectedEvent}
+          onClose={() => {
+            setIsRegistrationModalOpen(false);
+            setSelectedEvent(null);
+          }}
+          onRegister={handleRegister}
+        />
+      )}
     </div>
   );
 }

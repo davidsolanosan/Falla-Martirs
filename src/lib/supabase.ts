@@ -159,6 +159,8 @@ export interface Event {
   registration_deadline: string;
   is_active: boolean;
   includes_meal: boolean;
+  site?: string;
+  time?: string;
   created_at: string;
   updated_at: string;
 }

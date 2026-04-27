@@ -124,7 +124,12 @@ export const translations = {
     // Eventos
     createEvent: "Crear Evento",
     join: "Apuntarse",
+    joinEvent: "Apuntarse al evento",
+    unregister: "Eliminar inscripción",
     viewAttendees: "Ver inscritos",
+    site: "Sitio",
+    sitePlaceholder: "Ej: Casal de la Falla, Restaurante...",
+    time: "Hora",
     manageEvent: "Gestionar",
     onlyFamilyAdmins: "Solo los administradores de la familia pueden apuntar a eventos",
 
@@ -343,6 +348,10 @@ export const translations = {
     noEventsAvailable: "No hay eventos disponibles",
     noEventsDescription: "No hay eventos programados en este momento",
     eventExpired: "Esdeveniment Finalizat",
+    noFamilyAssigned: "No tienes familia asignada",
+    noFamilyDescription: "Para poder inscribirte en eventos, necesitas pertenecer a una familia. Contacta con el administrador.",
+    noFamilyMembers: "No hay miembros en tu familia",
+    noFamilyMembersDescription: "Tu familia no tiene miembros registrados. Contacta con el administrador.",
     
     // Eventos Usuario
     events: "Esdeveniments",
@@ -540,7 +549,12 @@ export const translations = {
     // Eventos
     createEvent: "Crear Esdeveniment",
     join: "Apuntar-se",
+    joinEvent: "Apuntar-se a l'esdeveniment",
+    unregister: "Eliminar inscripció",
     viewAttendees: "Veure inscrits",
+    site: "Lloc",
+    sitePlaceholder: "Ex: Casal de la Falla, Restaurant...",
+    time: "Hora",
     manageEvent: "Gestionar",
     onlyFamilyAdmins: "Només els administradors de la família poden apuntar a esdeveniments",
 
