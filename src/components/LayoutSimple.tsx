@@ -256,6 +256,43 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <nav className="p-4 space-y-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
+                
+                // Si es un item con subitems (como Administración)
+                if (item.subItems) {
+                  return (
+                    <div key={item.name} className="space-y-1">
+                      <button
+                        onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                        className="w-full flex items-center p-3 rounded-xl border border-slate-100 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Icon className="w-5 h-5 mr-2 text-slate-400" />
+                        {item.name}
+                        <ChevronRight className={`w-4 h-4 ml-auto transition-transform ${isAdminMenuOpen ? 'rotate-90' : ''}`} />
+                      </button>
+                      
+                      {isAdminMenuOpen && (
+                        <div className="ml-4 space-y-1">
+                          {item.subItems.map((subItem) => {
+                            const SubIcon = subItem.icon;
+                            return (
+                              <Link
+                                key={subItem.name}
+                                to={subItem.path}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="flex items-center p-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
+                              >
+                                <SubIcon className="w-4 h-4 mr-3 text-slate-400" />
+                                {subItem.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Items normales sin subitems
                 return (
                   <Link
                     key={item.name}
