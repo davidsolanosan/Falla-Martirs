@@ -161,7 +161,18 @@ export default function Eventos() {
   // Componente modal de inscripción
   const EventRegistrationModal = ({ event, onClose, onRegister, isRegistrationDeadlinePassed }) => {
     console.log('🔍 EventRegistrationModal renderizado con evento:', event);
-    const [selectedMembers, setSelectedMembers] = useState([]);
+    
+    // Obtener familia y miembros - usar el usuario completo de SupabaseContext
+    const fullUser = users.find(u => u.id === user?.id);
+    const userFamily = families.find(f => f.id === fullUser?.family_id);
+    const familyMembers = users.filter(u => u.family_id === userFamily?.id);
+    
+    // Inicializar con miembros ya inscritos
+    const initiallyRegisteredMembers = familyMembers
+      .filter(member => eventRegistrations.some(r => r.event_id === event.id && r.user_id === member.id))
+      .map(member => member.id);
+    
+    const [selectedMembers, setSelectedMembers] = useState(initiallyRegisteredMembers);
     const [memberMeals, setMemberMeals] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -173,11 +184,6 @@ export default function Eventos() {
       return eventRegistrations.some(r => r.event_id === event.id && r.user_id === memberId);
     };
 
-    // Obtener familia y miembros - usar el usuario completo de SupabaseContext
-    const fullUser = users.find(u => u.id === user?.id);
-    const userFamily = families.find(f => f.id === fullUser?.family_id);
-    const familyMembers = users.filter(u => u.family_id === userFamily?.id);
-    
     console.log('🔍 Datos del usuario (Auth):', user);
     console.log('🔍 Datos del usuario (Completo):', fullUser);
     console.log('🔍 Familia encontrada:', userFamily);
@@ -225,16 +231,44 @@ export default function Eventos() {
     };
 
     const handleSubmit = async () => {
-      if (selectedMembers.length === 0) return;
-      
       setIsSubmitting(true);
       
-      // Enviar cada miembro con su opción de comida individual
-      for (const memberId of selectedMembers) {
-        await onRegister([memberId], memberMeals[memberId] || false);
+      try {
+        // 1. Procesar nuevos miembros y modificaciones
+        for (const memberId of selectedMembers) {
+          const isRegistered = eventRegistrations.some(r => r.event_id === event.id && r.user_id === memberId);
+          
+          if (!isRegistered) {
+            // Nuevo miembro - inscribir
+            await onRegister([memberId], memberMeals[memberId] || false);
+          } else {
+            // Miembro existente - podría necesitar actualizar opciones de comida
+            // Por ahora, mantenemos la inscripción existente
+            console.log('Miembro ya inscrito, manteniendo registro:', memberId);
+          }
+        }
+        
+        // 2. Identificar miembros que fueron deseleccionados (para desinscribir)
+        const registeredMembers = familyMembers.filter(member => 
+          eventRegistrations.some(r => r.event_id === event.id && r.user_id === member.id)
+        );
+        
+        const membersToUnregister = registeredMembers.filter(member => 
+          !selectedMembers.includes(member.id)
+        );
+        
+        // 3. Desinscribir miembros que fueron deseleccionados
+        for (const member of membersToUnregister) {
+          await handleUnregister(member.id);
+        }
+        
+        setIsSubmitting(false);
+        onClose(); // Cerrar modal después de guardar
+        
+      } catch (error) {
+        console.error('Error al guardar inscripciones:', error);
+        setIsSubmitting(false);
       }
-      
-      setIsSubmitting(false);
     };
 
     return (
@@ -391,7 +425,7 @@ export default function Eventos() {
                 disabled={selectedMembers.length === 0 || isSubmitting || deadlinePassed}
                 className="flex-1 px-4 py-3 bg-[rgb(48,80,105)] text-white rounded-xl font-medium hover:bg-[rgb(48,80,105)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {isSubmitting ? t('registering') : t('register')}
+                {isSubmitting ? t('saving') : t('save')}
               </button>
             </div>
           </div>

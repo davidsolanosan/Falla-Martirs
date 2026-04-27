@@ -22,7 +22,7 @@ export default function Inici() {
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-50',
       iconColor: 'text-blue-600',
-      route: '/noticies'
+      route: '/noticias'
     },
     {
       id: 'esdeveniments',
@@ -31,7 +31,7 @@ export default function Inici() {
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-50',
       iconColor: 'text-purple-600',
-      route: '/esdeveniments'
+      route: '/eventos'
     },
     {
       id: 'quotes',
