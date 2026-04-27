@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { Calendar, Plus, Edit2, Trash2, Users, Eye, Euro, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+// Función para verificar si el plazo de inscripción ha finalizado
+const isRegistrationDeadlinePassed = (event) => {
+  if (!event.registration_deadline) return false;
+  
+  const deadline = new Date(event.registration_deadline);
+  const now = new Date();
+  // Establecer hora a 00:00:00 para comparar solo fechas
+  deadline.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  
+  return now > deadline;
+};
 
 export default function EventosAdmin() {
   const { t } = useTranslation();
@@ -193,9 +205,7 @@ export default function EventosAdmin() {
   };
 
   const isEventActive = (event: any) => {
-    const now = new Date();
-    const deadline = new Date(event.registration_deadline);
-    return event.is_active && deadline > now;
+    return event.is_active && !isRegistrationDeadlinePassed(event);
   };
 
   if (loading) {

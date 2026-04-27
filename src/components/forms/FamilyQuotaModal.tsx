@@ -3,6 +3,8 @@ import { Modal } from '../ui/Modal';
 import { useTranslation } from '../../lib/i18n';
 import { Family, User, Category, MonthlyPayment } from '../../types';
 import { calculateMonthlyPayment, calculateFamilyMonthlyPayment } from '../../lib/quotaCalculator';
+import { useSupabase } from '../../lib/SupabaseContext';
+import { ChevronDown, ChevronUp, Calendar, Users } from 'lucide-react';
 
 interface FamilyQuotaModalProps {
   isOpen: boolean;
@@ -22,6 +24,10 @@ export function FamilyQuotaModal({
   onUpdate 
 }: FamilyQuotaModalProps) {
   const { t } = useTranslation();
+  const { events, eventRegistrations } = useSupabase();
+  
+  // Estado para controlar el desplegable de eventos
+  const [eventsExpanded, setEventsExpanded] = useState(false);
   
   // Estado para las papeletas de cada usuario
   const [userLotteryTickets, setUserLotteryTickets] = useState<Record<string, number>>(() => {
@@ -53,6 +59,44 @@ export function FamilyQuotaModal({
     return calculateFamilyMonthlyPayment(usersWithPayments, categories);
   }, [usersWithPayments, categories]);
 
+  // Calcular eventos de la familia
+  const familyEvents = useMemo(() => {
+    if (!family.id || !events.length || !eventRegistrations.length) return [];
+    
+    // Obtener inscripciones de los miembros de la familia
+    const familyUserIds = familyUsers.map(user => user.id);
+    const familyEventRegistrations = eventRegistrations.filter(reg => 
+      familyUserIds.includes(reg.user_id)
+    );
+    
+    // Agrupar por evento y calcular totales
+    const eventsMap = new Map();
+    
+    familyEventRegistrations.forEach(registration => {
+      const event = events.find(e => e.id === registration.event_id);
+      if (!event) return;
+      
+      if (!eventsMap.has(event.id)) {
+        eventsMap.set(event.id, {
+          event,
+          attendees: 0,
+          totalCost: 0
+        });
+      }
+      
+      const eventData = eventsMap.get(event.id);
+      eventData.attendees += 1;
+      eventData.totalCost += registration.total_price || 0;
+    });
+    
+    return Array.from(eventsMap.values());
+  }, [family.id, events, eventRegistrations, familyUsers]);
+
+  // Calcular coste total de eventos
+  const eventsTotalCost = useMemo(() => {
+    return familyEvents.reduce((total, event) => total + event.totalCost, 0);
+  }, [familyEvents]);
+
   const handleLotteryTicketsChange = (userId: string, tickets: number) => {
     setUserLotteryTickets(prev => ({
       ...prev,
@@ -81,16 +125,16 @@ export function FamilyQuotaModal({
           <h3 className="font-semibold text-slate-900 mb-3">Resumen Familiar</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-slate-500">Total mensual:</span>
+              <span className="text-slate-500">Cuota familiar:</span>
               <p className="font-semibold text-lg">€{familyTotal.totalAmount.toFixed(2)}</p>
             </div>
             <div>
-              <span className="text-slate-500">En papeletas:</span>
-              <p className="font-semibold text-lg text-green-600">€{familyTotal.lotteryAmount.toFixed(2)}</p>
+              <span className="text-slate-500">Coste eventos:</span>
+              <p className="font-semibold text-lg text-orange-600">€{eventsTotalCost.toFixed(2)}</p>
             </div>
             <div>
-              <span className="text-slate-500">En dinero:</span>
-              <p className="font-semibold text-lg text-blue-600">€{familyTotal.moneyAmount.toFixed(2)}</p>
+              <span className="text-slate-500">Total a pagar:</span>
+              <p className="font-semibold text-lg text-[rgb(48,80,105)]">€{(familyTotal.totalAmount + eventsTotalCost).toFixed(2)}</p>
             </div>
             <div>
               <span className="text-slate-500">Total papeletas:</span>
@@ -98,6 +142,101 @@ export function FamilyQuotaModal({
             </div>
           </div>
         </div>
+
+        {/* Desplegable de Eventos */}
+        {familyEvents.length > 0 && (
+          <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setEventsExpanded(!eventsExpanded)}
+              className="w-full px-6 py-4 flex items-center justify-between bg-[rgb(48,80,105)] text-white hover:bg-[rgb(48,80,105)]/90 transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <Calendar className="w-5 h-5" />
+                <span className="font-medium">{t('events')}</span>
+                <span className="bg-white/20 px-2 py-1 rounded-full text-xs">
+                  {familyEvents.length}
+                </span>
+              </div>
+              {eventsExpanded ? (
+                <ChevronUp className="w-5 h-5" />
+              ) : (
+                <ChevronDown className="w-5 h-5" />
+              )}
+            </button>
+            
+            {eventsExpanded && (
+              <div className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-3 px-4 font-medium text-slate-700">
+                          {t('eventName')}
+                        </th>
+                        <th className="text-center py-3 px-4 font-medium text-slate-700">
+                          {t('attendees')}
+                        </th>
+                        <th className="text-right py-3 px-4 font-medium text-slate-700">
+                          {t('totalCost')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {familyEvents.map((familyEvent, index) => (
+                        <tr 
+                          key={familyEvent.event.id} 
+                          className={`border-b ${
+                            index % 2 === 0 ? 'bg-slate-50' : 'bg-white'
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="font-medium text-slate-900">
+                              {familyEvent.event.title}
+                            </div>
+                            <div className="text-sm text-slate-500">
+                              {new Date(familyEvent.event.event_date).toLocaleDateString()}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              <Users className="w-4 h-4 text-slate-400" />
+                              <span className="font-medium text-slate-900">
+                                {familyEvent.attendees}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-semibold text-orange-600">
+                              €{familyEvent.totalCost.toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-300">
+                        <td className="py-3 px-4 font-bold text-slate-900">
+                          {t('total')}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-bold text-slate-900">
+                            {familyEvents.reduce((sum, e) => sum + e.attendees, 0)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className="font-bold text-lg text-[rgb(48,80,105)]">
+                            €{eventsTotalCost.toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Lista de falleros */}
         <div className="space-y-4">

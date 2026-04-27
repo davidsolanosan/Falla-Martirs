@@ -17,8 +17,27 @@ export default function Eventos() {
   
   const dateLocale = language === 'va' ? ca : es;
 
+  // Función para verificar si el plazo de inscripción ha finalizado
+  const isRegistrationDeadlinePassed = (event) => {
+    if (!event.registration_deadline) return false;
+    
+    const deadline = new Date(event.registration_deadline);
+    const now = new Date();
+    // Establecer hora a 00:00:00 para comparar solo fechas
+    deadline.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    return now > deadline;
+  };
+
   // Función para abrir modal de inscripción
   const openRegistrationModal = (event) => {
+    // Verificar si el plazo ha finalizado
+    if (isRegistrationDeadlinePassed(event)) {
+      console.log('❌ Plazo de inscripción finalizado para evento:', event.title);
+      return;
+    }
+    
     console.log('🔍 Abriendo modal de inscripción para evento:', event);
     setSelectedEvent(event);
     setIsRegistrationModalOpen(true);
@@ -27,6 +46,12 @@ export default function Eventos() {
   // Función para eliminar inscripción
   const handleUnregister = async (memberId) => {
     if (!selectedEvent) return;
+    
+    // Verificar si el plazo ha finalizado
+    if (isRegistrationDeadlinePassed(selectedEvent)) {
+      console.log('❌ No se puede eliminar inscripción - plazo finalizado');
+      return;
+    }
     
     try {
       const registration = eventRegistrations.find(
@@ -45,6 +70,12 @@ export default function Eventos() {
   // Función para manejar la inscripción
   const handleRegister = async (selectedMembers, includesMeal) => {
     if (!selectedEvent) return;
+
+    // Verificar si el plazo ha finalizado
+    if (isRegistrationDeadlinePassed(selectedEvent)) {
+      console.log('❌ No se puede inscribir - plazo finalizado');
+      return;
+    }
 
     try {
       // Obtener usuario completo y familia - igual que en el modal
@@ -90,13 +121,27 @@ export default function Eventos() {
           console.log('🔧 Usando categoría por defecto:', categoryId);
         }
         
+        // Calcular el precio según la categoría
+        const eventPrice = eventPrices.find(p => 
+          p.event_id === selectedEvent.id && p.category_id === categoryId
+        );
+        
+        const calculatedPrice = eventPrice?.price || 0;
+        
+        console.log('💰 Precio calculado:', {
+          event_id: selectedEvent.id,
+          category_id: categoryId,
+          eventPrice,
+          calculatedPrice
+        });
+        
         await createEventRegistration({
           event_id: selectedEvent.id,
           user_id: memberId,
           family_id: userFamily?.id || '',
           category_id: categoryId,
           includes_meal: includesMeal,
-          total_price: 0, // Se calculará según el precio de la categoría
+          total_price: calculatedPrice,
           registered_by: user?.id || '',
           registered_at: new Date().toISOString()
         });
@@ -114,11 +159,14 @@ export default function Eventos() {
   };
 
   // Componente modal de inscripción
-  const EventRegistrationModal = ({ event, onClose, onRegister }) => {
+  const EventRegistrationModal = ({ event, onClose, onRegister, isRegistrationDeadlinePassed }) => {
     console.log('🔍 EventRegistrationModal renderizado con evento:', event);
     const [selectedMembers, setSelectedMembers] = useState([]);
     const [memberMeals, setMemberMeals] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Verificar si el plazo ha finalizado
+    const deadlinePassed = isRegistrationDeadlinePassed(event);
 
     // Verificar si un miembro ya está inscrito
     const isMemberRegistered = (memberId) => {
@@ -199,6 +247,15 @@ export default function Eventos() {
             </button>
           </div>
 
+          {deadlinePassed && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center text-red-700">
+                <X className="w-5 h-5 mr-2" />
+                <span className="font-medium">{t('registrationDeadlinePassed')}</span>
+              </div>
+            </div>
+          )}
+
           <div className="mb-6">
             <h4 className="font-semibold text-slate-700 mb-3">{t('selectFamilyMembers')}</h4>
             {!userFamily ? (
@@ -243,7 +300,12 @@ export default function Eventos() {
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleMemberToggle(member.id)}
-                              className="mr-3 h-5 w-5 text-[rgb(48,80,105)] rounded focus:ring-[rgb(48,80,105)]"
+                              disabled={deadlinePassed}
+                              className={`mr-3 h-5 w-5 rounded focus:ring-[rgb(48,80,105)] ${
+                                deadlinePassed
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-[rgb(48,80,105)]'
+                              }`}
                             />
                           ) : (
                             <div className="mr-3 h-5 w-5 bg-green-500 rounded flex items-center justify-center">
@@ -263,7 +325,12 @@ export default function Eventos() {
                           {isRegistered ? (
                             <button
                               onClick={() => handleUnregister(member.id)}
-                              className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                              disabled={deadlinePassed}
+                              className={`px-3 py-1 text-white text-sm rounded transition-colors ${
+                                deadlinePassed
+                                  ? 'bg-gray-300 cursor-not-allowed opacity-50'
+                                  : 'bg-red-500 hover:bg-red-600'
+                              }`}
                             >
                               {t('unregister')}
                             </button>
@@ -321,7 +388,7 @@ export default function Eventos() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={selectedMembers.length === 0 || isSubmitting}
+                disabled={selectedMembers.length === 0 || isSubmitting || deadlinePassed}
                 className="flex-1 px-4 py-3 bg-[rgb(48,80,105)] text-white rounded-xl font-medium hover:bg-[rgb(48,80,105)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isSubmitting ? t('registering') : t('register')}
@@ -420,9 +487,14 @@ export default function Eventos() {
                   {user ? (
                     <button 
                       onClick={() => openRegistrationModal(event)}
-                      className="text-sm font-medium text-white bg-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)] px-4 py-2 rounded-xl transition-all"
+                      disabled={isRegistrationDeadlinePassed(event)}
+                      className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${
+                        isRegistrationDeadlinePassed(event)
+                          ? 'text-slate-400 bg-slate-100 cursor-not-allowed opacity-50'
+                          : 'text-white bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]'
+                      }`}
                     >
-                      {t('join')}
+                      {isRegistrationDeadlinePassed(event) ? t('registrationClosed') : t('join')}
                     </button>
                   ) : (
                     <div className="relative group">
@@ -450,6 +522,7 @@ export default function Eventos() {
             setSelectedEvent(null);
           }}
           onRegister={handleRegister}
+          isRegistrationDeadlinePassed={isRegistrationDeadlinePassed}
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
@@ -6,7 +6,7 @@ import { CreditCard, Calendar, Ticket, Users, ChevronDown, ChevronUp } from 'luc
 
 export default function Cuotas() {
   const { t } = useTranslation();
-  const { families, users, categories, lotteryDates } = useSupabase();
+  const { families, users, categories, lotteryDates, events, eventRegistrations } = useSupabase();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -190,6 +190,47 @@ export default function Cuotas() {
     };
   };
 
+  // Calcular eventos de la familia
+  const familyEvents = useMemo(() => {
+    if (!userFamily?.id || !events?.length || !eventRegistrations?.length) return [];
+    
+    // Obtener miembros de la familia
+    const familyMembers = getFamilyMembers(userFamily.id);
+    const familyUserIds = familyMembers.map(member => member.id);
+    
+    // Obtener inscripciones de los miembros de la familia
+    const familyEventRegistrations = eventRegistrations.filter(reg => 
+      familyUserIds.includes(reg.user_id)
+    );
+    
+    // Agrupar por evento y calcular totales
+    const eventsMap = new Map();
+    
+    familyEventRegistrations.forEach(registration => {
+      const event = events.find(e => e.id === registration.event_id);
+      if (!event) return;
+      
+      if (!eventsMap.has(event.id)) {
+        eventsMap.set(event.id, {
+          event,
+          attendees: 0,
+          totalCost: 0
+        });
+      }
+      
+      const eventData = eventsMap.get(event.id);
+      eventData.attendees += 1;
+      eventData.totalCost += registration.total_price || 0;
+    });
+    
+    return Array.from(eventsMap.values());
+  }, [userFamily, events, eventRegistrations, users]);
+
+  // Calcular coste total de eventos
+  const eventsTotalCost = useMemo(() => {
+    return familyEvents.reduce((total, event) => total + event.totalCost, 0);
+  }, [familyEvents]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -306,6 +347,130 @@ export default function Cuotas() {
           </div>
         </div>
       </div>
+
+      {/* Total Payment Summary */}
+      {eventsTotalCost > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
+          <div className="p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('paymentSummary')}</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">{t('annualQuota')}</span>
+                <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                  €{quota.annualCost.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600">{t('eventsCost')}</span>
+                <span className="font-semibold text-orange-600">
+                  €{eventsTotalCost.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t-2 border-orange-200">
+                <span className="font-bold text-slate-800 text-lg">{t('totalToPay')}</span>
+                <span className="font-bold text-xl" style={{ color: 'rgb(48,80,105)' }}>
+                  €{(quota.annualCost + eventsTotalCost).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Events Info */}
+      {familyEvents.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div 
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setExpandedSection(expandedSection === 'events' ? null : 'events')}
+          >
+            <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              {t('events')}
+            </h2>
+            <div className="flex items-center space-x-3">
+              <span className="bg-[rgb(48,80,105)]/10 px-2 py-1 rounded-full text-xs font-medium text-[rgb(48,80,105)]">
+                {familyEvents.length}
+              </span>
+              {expandedSection === 'events' ? (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              )}
+            </div>
+          </div>
+
+          {expandedSection === 'events' && (
+            <div className="mt-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">
+                        {t('eventName')}
+                      </th>
+                      <th className="text-center py-3 px-4 font-medium text-slate-700">
+                        {t('attendees')}
+                      </th>
+                      <th className="text-right py-3 px-4 font-medium text-slate-700">
+                        {t('totalCost')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {familyEvents.map((familyEvent, index) => (
+                      <tr 
+                        key={familyEvent.event.id} 
+                        className={`border-b ${
+                          index % 2 === 0 ? 'bg-slate-50' : 'bg-white'
+                        }`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-slate-900">
+                            {familyEvent.event.title}
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            {new Date(familyEvent.event.event_date).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Users className="w-4 h-4 text-slate-400" />
+                            <span className="font-medium text-slate-900">
+                              {familyEvent.attendees}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <span className="font-semibold text-orange-600">
+                            €{familyEvent.totalCost.toFixed(2)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-300">
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {t('total')}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="font-bold text-slate-900">
+                          {familyEvents.reduce((sum, e) => sum + e.attendees, 0)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="font-bold text-lg text-[rgb(48,80,105)]">
+                          €{eventsTotalCost.toFixed(2)}
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Lottery Info */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">

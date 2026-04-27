@@ -115,6 +115,7 @@ export const translations = {
     upToDate: "Al día",
     viewDetail: "Ver detalle",
     totalQuota: "Cuota total",
+    closed: "Cerrado",
 
     // Loteria
     newLottery: "Nueva Lotería",
@@ -127,10 +128,21 @@ export const translations = {
     joinEvent: "Apuntarse al evento",
     unregister: "Eliminar inscripción",
     viewAttendees: "Ver inscritos",
+    registrationClosed: "Inscripción cerrada",
+    registrationDeadlinePassed: "El plazo de inscripción ha finalizado. No se pueden realizar cambios.",
     site: "Sitio",
     sitePlaceholder: "Ej: Casal de la Falla, Restaurante...",
     time: "Hora",
     manageEvent: "Gestionar",
+    events: "Eventos",
+    eventName: "Nombre Evento",
+    attendees: "Asistentes",
+    totalCost: "Coste Total",
+    total: "Total",
+    eventsCost: "Coste Eventos",
+    totalToPay: "Total a Pagar",
+    paymentSummary: "Resumen de Pagos",
+    annualQuota: "Cuota Anual",
     onlyFamilyAdmins: "Solo los administradores de la familia pueden apuntar a eventos",
 
     // Documentos
@@ -545,6 +557,9 @@ export const translations = {
     newLottery: "Nova Loteria",
     totalTickets: "Total paperetes",
     assigned: "Assignades",
+    active: "Actiu",
+    inactive: "Inactiu",
+    closed: "Tancat",
 
     // Eventos
     createEvent: "Crear Esdeveniment",
@@ -552,10 +567,21 @@ export const translations = {
     joinEvent: "Apuntar-se a l'esdeveniment",
     unregister: "Eliminar inscripció",
     viewAttendees: "Veure inscrits",
+    registrationClosed: "Inscripció tancada",
+    registrationDeadlinePassed: "El termini d'inscripció ha finalitzat. No es poden realitzar canvis.",
     site: "Lloc",
     sitePlaceholder: "Ex: Casal de la Falla, Restaurant...",
     time: "Hora",
     manageEvent: "Gestionar",
+    events: "Esdeveniments",
+    eventName: "Nom Esdeveniment",
+    attendees: "Assistents",
+    totalCost: "Cost Total",
+    total: "Total",
+    eventsCost: "Cost Esdeveniments",
+    totalToPay: "Total a Pagar",
+    paymentSummary: "Resum de Pagaments",
+    annualQuota: "Quota Anual",
     onlyFamilyAdmins: "Només els administradors de la família poden apuntar a esdeveniments",
 
     // Documentos
