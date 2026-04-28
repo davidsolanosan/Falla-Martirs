@@ -367,7 +367,7 @@ export default function Eventos() {
                   
                   return (
                     <div key={member.id} className={`border rounded-xl p-4 transition-colors ${
-                      isRegistered ? 'bg-green-50 border-green-200' : 'hover:bg-slate-50'
+                      isRegistered ? 'bg-[rgb(48,80,105)]/10 border-[rgb(48,80,105)]/20' : 'hover:bg-slate-50'
                     }`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center">
@@ -384,7 +384,7 @@ export default function Eventos() {
                               }`}
                             />
                           ) : (
-                            <div className="mr-3 h-5 w-5 bg-green-500 rounded flex items-center justify-center">
+                            <div className="mr-3 h-5 w-5 bg-[rgb(48,80,105)] rounded flex items-center justify-center">
                               <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
@@ -397,42 +397,40 @@ export default function Eventos() {
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {isRegistered ? (
-                            <button
-                              onClick={() => handleUnregister(member.id)}
-                              disabled={deadlinePassed}
-                              className={`px-3 py-1 text-white text-sm rounded transition-colors ${
-                                deadlinePassed
-                                  ? 'bg-gray-300 cursor-not-allowed opacity-50'
-                                  : 'bg-red-500 hover:bg-red-600'
-                              }`}
-                            >
-                              {t('unregister')}
-                            </button>
-                          ) : isSelected && (
-                            <p className="text-sm font-medium text-slate-600">
-                              {categoryPrice?.price || 0}€
-                            </p>
-                          )}
                         </div>
-                      </div>
                   
                   {selectedMembers.includes(member.id) && event.includes_meal && (
                     <div className="ml-8 p-3 bg-slate-50 rounded-lg">
-                      <label className="flex items-center cursor-pointer mb-2">
+                      <label className="flex items-center cursor-pointer">
                         <input
                           type="checkbox"
                           checked={memberMeals[member.id] || false}
                           onChange={() => handleMealToggle(member.id)}
-                          className="mr-3 h-4 w-4 text-[rgb(48,80,105)] rounded focus:ring-[rgb(48,80,105)]"
+                          className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
+                            memberMeals[member.id] 
+                              ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]' 
+                              : 'text-slate-600 bg-white border-slate-300'
+                          }`}
                         />
-                        <div>
-                          <p className="font-medium text-sm">{t('includeMeal')}</p>
-                          <p className="text-xs text-slate-500">{t('mealDescription')}</p>
-                        </div>
+                        {event.meal_type && (
+                          <p className="text-sm text-slate-700 font-medium">{event.meal_type}</p>
+                        )}
                       </label>
                     </div>
+                  )}
+
+                  {isRegistered && (
+                    <button
+                      onClick={() => handleUnregister(member.id)}
+                      disabled={deadlinePassed}
+                      className={`ml-8 px-3 py-1 text-white text-sm rounded transition-colors ${
+                        deadlinePassed
+                          ? 'bg-gray-300 cursor-not-allowed opacity-50'
+                          : 'bg-red-500 hover:bg-red-600'
+                      }`}
+                    >
+                      {t('unregister')}
+                    </button>
                   )}
                 </div>
                   );
