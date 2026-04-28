@@ -11,8 +11,6 @@ export default function Eventos() {
   const { t, language } = useTranslation();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
-  const [selectedMembers, setSelectedMembers] = useState([]);
-  const [memberMeals, setMemberMeals] = useState({});
   const { events, loading, users, families, eventPrices, createEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
   
   const dateLocale = language === 'va' ? ca : es;
@@ -67,48 +65,54 @@ export default function Eventos() {
     }
   };
 
-  // Función para manejar la inscripción
-  const handleRegister = async (selectedMembers, includesMeal) => {
-    if (!selectedEvent) return;
-
+  // Función para inscribir miembros
+  const handleRegister = async (memberIds, includesMeal, event) => {
+    if (!event) return;
+    
     // Verificar si el plazo ha finalizado
-    if (isRegistrationDeadlinePassed(selectedEvent)) {
+    if (isRegistrationDeadlinePassed(event)) {
       console.log('❌ No se puede inscribir - plazo finalizado');
       return;
     }
-
+    
+    console.log('🔍 Iniciando inscripción:', { memberIds, includesMeal, event });
+    
     try {
-      // Obtener usuario completo y familia - igual que en el modal
+      // Obtener familia y miembros - usar el usuario completo de SupabaseContext
       const fullUser = users.find(u => u.id === user?.id);
       const userFamily = families.find(f => f.id === fullUser?.family_id);
-      const familyMembers = users.filter(u => u.family_id === userFamily?.id);
-
-      console.log('🔍 handleRegister - fullUser:', fullUser);
-      console.log('🔍 handleRegister - userFamily:', userFamily);
-      console.log('🔍 handleRegister - familyMembers:', familyMembers);
-
-      // Registrar cada miembro seleccionado
-      for (const memberId of selectedMembers) {
-        const member = familyMembers.find(m => m.id === memberId);
-        console.log('🔍 Miembro seleccionado:', member);
-        console.log('🔍 category_id del miembro:', member?.category_id);
-        console.log('🔍 Todos los campos del miembro:', Object.keys(member || {}));
-        console.log('🔍 Valores completos del miembro:', JSON.stringify(member, null, 2));
+      
+      console.log('🔍 Usuario completo:', fullUser);
+      console.log('🔍 Familia:', userFamily);
+      
+      for (const memberId of memberIds) {
+        // Obtener categoría del miembro
+        const member = users.find(u => u.id === memberId);
+        const categoryId = member?.category_id;
         
-        // También mostrar los precios disponibles para comparar
-        console.log('🔍 Precios disponibles:', eventPrices.map(p => ({
-          category_id: p.category_id,
-          price: p.price,
-          event_id: p.event_id
-        })));
-        console.log('🔍 Precios completos:', JSON.stringify(eventPrices, null, 2));
-        
-        // Verificar si el miembro tiene categoría asignada
-        let categoryId = member?.category_id;
+        console.log('🔍 Procesando miembro:', { memberId, categoryId });
         
         if (!categoryId) {
-          console.warn('⚠️ El miembro no tiene categoría asignada, usando categoría por defecto:', member?.name, member?.surname);
-          
+          console.error('❌ El miembro no tiene categoría asignada:', memberId);
+          alert('El miembro no tiene categoría asignada. Por favor, contacta con el administrador.');
+          continue;
+        }
+        
+        // Verificar si hay precios configurados para el evento
+        const eventPricesForEvent = eventPrices.filter(p => p.event_id === event.id);
+        console.log('🔍 Precios del evento:', eventPricesForEvent);
+        
+        if (eventPricesForEvent.length === 0) {
+          console.error('❌ No hay precios configurados para este evento');
+          alert('No hay precios configurados para este evento. Por favor, contacta con el administrador.');
+          continue;
+        }
+        
+        // Buscar precio para la categoría específica
+        let eventPrice = eventPricesForEvent.find(p => p.category_id === categoryId);
+        
+        if (!eventPrice) {
+          console.warn('⚠️ No hay precio para la categoría específica, usando primera disponible');
           // Usar la primera categoría disponible como por defecto
           const defaultCategory = eventPrices[0]?.category_id;
           if (!defaultCategory) {
@@ -122,21 +126,21 @@ export default function Eventos() {
         }
         
         // Calcular el precio según la categoría
-        const eventPrice = eventPrices.find(p => 
-          p.event_id === selectedEvent.id && p.category_id === categoryId
+        const finalEventPrice = eventPrices.find(p => 
+          p.event_id === event.id && p.category_id === categoryId
         );
         
-        const calculatedPrice = eventPrice?.price || 0;
+        const calculatedPrice = finalEventPrice?.price || 0;
         
         console.log('💰 Precio calculado:', {
-          event_id: selectedEvent.id,
+          event_id: event.id,
           category_id: categoryId,
-          eventPrice,
+          eventPrice: finalEventPrice,
           calculatedPrice
         });
         
         await createEventRegistration({
-          event_id: selectedEvent.id,
+          event_id: event.id,
           user_id: memberId,
           family_id: userFamily?.id || '',
           category_id: categoryId,
@@ -149,10 +153,6 @@ export default function Eventos() {
 
       setIsRegistrationModalOpen(false);
       setSelectedEvent(null);
-      
-      // Limpiar selección
-      setSelectedMembers([]);
-      setMemberMeals({});
     } catch (error) {
       console.error('Error al inscribir:', error);
     }
@@ -161,6 +161,11 @@ export default function Eventos() {
   // Componente modal de inscripción
   const EventRegistrationModal = ({ event, onClose, onRegister, isRegistrationDeadlinePassed }) => {
     console.log('🔍 EventRegistrationModal renderizado con evento:', event);
+    console.log('🔍 Datos de comida del evento:', {
+      includes_meal: event.includes_meal,
+      meal_type: event.meal_type,
+      meal_cost: event.meal_cost
+    });
     
     // Obtener familia y miembros - usar el usuario completo de SupabaseContext
     const fullUser = users.find(u => u.id === user?.id);
@@ -190,17 +195,54 @@ export default function Eventos() {
     console.log('🔍 Miembros de la familia:', familyMembers);
     console.log('🔍 Precios del evento:', eventPrices);
 
-    // Calcular coste total
+    // Calcular coste total (correcto: precios por categoría + coste adicional)
     const calculateTotal = () => {
       let total = 0;
+      
+      console.log('🔍 Calculando total correcto:', {
+        selectedMembers,
+        memberMeals,
+        eventPrices,
+        eventMealCost: event.meal_cost
+      });
+      
+      // Sumar precios por categoría para cada miembro seleccionado
       for (const memberId of selectedMembers) {
-        const member = familyMembers.find(m => m.id === memberId);
-        const price = eventPrices.find(p => p.event_id === event.id && p.category_id === member?.category_id);
-        total += price?.price || 0;
-        if (event.includes_meal && memberMeals[memberId]) {
-          total += 10; // Coste adicional por comida
+        // Obtener categoría del miembro
+        const member = users.find(u => u.id === memberId);
+        const categoryId = member?.category_id;
+        
+        if (categoryId) {
+          // Buscar precio para esta categoría en este evento
+          const eventPrice = eventPrices.find(p => 
+            p.event_id === event.id && p.category_id === categoryId
+          );
+          
+          const categoryPrice = eventPrice?.price || 0;
+          total += categoryPrice;
+          
+          console.log(`💰 Miembro ${memberId}:`, {
+            categoryId,
+            categoryPrice,
+            memberName: `${member?.name} ${member?.surname}`
+          });
         }
       }
+      
+      // Añadir coste adicional por comida si aplica
+      if (event.includes_meal && event.meal_cost) {
+        const membersWithMeal = selectedMembers.filter(id => memberMeals[id]).length;
+        const mealAdditionalCost = event.meal_cost * membersWithMeal;
+        total += mealAdditionalCost;
+        
+        console.log('🍽️ Coste adicional comida:', {
+          mealCostPerPerson: event.meal_cost,
+          membersWithMeal,
+          mealAdditionalCost
+        });
+      }
+      
+      console.log('🎯 TOTAL FINAL:', total);
       return total;
     };
 
@@ -378,7 +420,7 @@ export default function Eventos() {
                   
                   {selectedMembers.includes(member.id) && event.includes_meal && (
                     <div className="ml-8 p-3 bg-slate-50 rounded-lg">
-                      <label className="flex items-center cursor-pointer">
+                      <label className="flex items-center cursor-pointer mb-2">
                         <input
                           type="checkbox"
                           checked={memberMeals[member.id] || false}
@@ -387,7 +429,7 @@ export default function Eventos() {
                         />
                         <div>
                           <p className="font-medium text-sm">{t('includeMeal')}</p>
-                          <p className="text-xs text-slate-500">{t('mealDescription')} (+10€)</p>
+                          <p className="text-xs text-slate-500">{t('mealDescription')}</p>
                         </div>
                       </label>
                     </div>
@@ -398,6 +440,32 @@ export default function Eventos() {
               </div>
             )}
           </div>
+
+          {/* Información del evento configurada desde administración */}
+          {event.includes_meal && (
+            <div className="border-t pt-6">
+              <h4 className="text-lg font-semibold text-slate-800 mb-4">Información del Menú</h4>
+              <div className="bg-slate-50 rounded-lg p-4">
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-slate-600">Menú:</span>
+                    <span className="text-sm text-slate-800 ml-2">
+                      {event.meal_type || 'No especificado'}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-slate-600">Coste por persona:</span>
+                    <span className="text-sm text-slate-800 ml-2">
+                      {event.meal_cost !== undefined && event.meal_cost !== null 
+                        ? `€${event.meal_cost}` 
+                        : 'Gratuito'
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-4">

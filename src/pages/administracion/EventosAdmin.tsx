@@ -30,6 +30,8 @@ export default function EventosAdmin() {
     registration_deadline: '',
     is_active: true,
     includes_meal: true,
+    meal_type: '', // Tipo de comida (ej: bocadillo de longanizas con tomate)
+    meal_cost: '', // Coste adicional por persona
     site: '',
     time: ''
   });
@@ -65,45 +67,52 @@ export default function EventosAdmin() {
   const handleSaveEvent = async () => {
     try {
       console.log('🔍 handleSaveEvent iniciando...');
-      console.log('🔍 formData completo:', formData);
-      console.log('🔍 editingEvent:', editingEvent);
+    
+    // Convertir meal_cost a null si está vacío para evitar error de tipo numérico
+    const processedFormData = {
+      ...formData,
+      meal_cost: formData.meal_cost === '' ? null : parseFloat(formData.meal_cost) || 0
+    };
+    
+    console.log('🔍 formData procesado:', processedFormData);
+    console.log('🔍 editingEvent:', editingEvent);
       
       let savedEventId: string;
 
       if (editingEvent) {
-        console.log('🔍 Intentando actualizar evento con todos los datos:', formData);
+        console.log('🔍 Intentando actualizar evento con todos los datos:', processedFormData);
         
         try {
-          // Intentar guardar con site y time
-          await updateEvent(editingEvent.id, formData);
-          console.log('✅ Evento actualizado correctamente con site y time');
+          // Intentar guardar con todos los campos
+          await updateEvent(editingEvent.id, processedFormData);
+          console.log('✅ Evento actualizado correctamente con todos los campos');
         } catch (error) {
-          // Si falla por columnas inexistentes, omitir site y time
-          if (error.code === 'PGRST204' && error.message.includes('site')) {
-            console.log('⚠️ Columnas site/time no existen, guardando sin ellas');
-            const { site, time, ...eventData } = formData;
+          // Si falla por columnas inexistentes, omitirlas
+          if (error.code === 'PGRST204') {
+            console.log('⚠️ Algunas columnas no existen, guardando sin ellas');
+            const { site, time, meal_type, meal_cost, ...eventData } = processedFormData;
             await updateEvent(editingEvent.id, eventData);
-            console.log('✅ Evento actualizado correctamente sin site y time');
+            console.log('✅ Evento actualizado correctamente sin columnas inexistentes');
           } else {
             throw error; // Otro error, propagar
           }
         }
         savedEventId = editingEvent.id;
       } else {
-        console.log('🔍 Intentando crear evento con todos los datos:', formData);
+        console.log('🔍 Intentando crear evento con todos los datos:', processedFormData);
         
         try {
-          // Intentar crear con site y time
-          const newEvent = await createEvent(formData);
-          console.log('✅ Evento creado correctamente con site y time');
+          // Intentar crear con todos los campos
+          const newEvent = await createEvent(processedFormData);
+          console.log('✅ Evento creado correctamente con todos los campos');
           savedEventId = newEvent.id;
         } catch (error) {
-          // Si falla por columnas inexistentes, omitir site y time
-          if (error.code === 'PGRST204' && error.message.includes('site')) {
-            console.log('⚠️ Columnas site/time no existen, creando sin ellas');
-            const { site, time, ...eventData } = formData;
+          // Si falla por columnas inexistentes, omitirlas
+          if (error.code === 'PGRST204') {
+            console.log('⚠️ Algunas columnas no existen, creando sin ellas');
+            const { site, time, meal_type, meal_cost, ...eventData } = processedFormData;
             const newEvent = await createEvent(eventData);
-            console.log('✅ Evento creado correctamente sin site y time');
+            console.log('✅ Evento creado correctamente sin columnas inexistentes');
             savedEventId = newEvent.id;
           } else {
             throw error; // Otro error, propagar
@@ -145,6 +154,8 @@ export default function EventosAdmin() {
       registration_deadline: event.registration_deadline,
       is_active: event.is_active,
       includes_meal: event.includes_meal,
+      meal_type: event.meal_type || '',
+      meal_cost: event.meal_cost || '',
       site: event.site || '',
       time: event.time || ''
     });
@@ -181,6 +192,8 @@ export default function EventosAdmin() {
       registration_deadline: '',
       is_active: true,
       includes_meal: true,
+      meal_type: '',
+      meal_cost: '',
       site: '',
       time: ''
     });
@@ -525,6 +538,47 @@ export default function EventosAdmin() {
                   <span className="text-sm font-medium text-slate-700">{t('includesMeal')}</span>
                 </label>
               </div>
+
+              {/* Meal Configuration */}
+              {formData.includes_meal && (
+                <div className="space-y-4 p-4 bg-slate-50 rounded-lg">
+                  <h4 className="text-lg font-semibold text-slate-700">Configuración del Menú</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tipo de Comida
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.meal_type}
+                      onChange={(e) => setFormData({ ...formData, meal_type: e.target.value })}
+                      placeholder="Ej: bocadillo de longanizas con tomate"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Coste Adicional por Persona (€)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-slate-600">€</span>
+                      <input
+                        type="number"
+                        value={formData.meal_cost}
+                        onChange={(e) => setFormData({ ...formData, meal_cost: e.target.value })}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                      />
+                      <span className="text-sm text-slate-500">
+                        {formData.meal_cost === '' || parseFloat(formData.meal_cost) === 0 ? 'Gratuito' : 'Coste por persona'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Prices by Category */}
               <div>
