@@ -388,7 +388,7 @@ export default function Eventos() {
                         <div className="flex-1">
                           <p className="font-medium text-lg">{member.name} {member.surname}</p>
                           <p className="text-sm text-slate-500">
-                            {categoryPrice?.price || 0}€
+                            {categoryPrice?.price || 0} €
                           </p>
                         </div>
                       </div>
@@ -437,7 +437,7 @@ export default function Eventos() {
                     <span className="text-sm font-medium text-slate-600">{t('additionalCost')}:</span>
                     <span className="text-sm text-slate-800 ml-2">
                       {event.meal_cost !== undefined && event.meal_cost !== null 
-                        ? `€${event.meal_cost}` 
+                        ? `${event.meal_cost} €` 
                         : t('free')
                       }
                     </span>
@@ -458,7 +458,7 @@ export default function Eventos() {
                   }
                 </p>
               </div>
-              <span className="text-2xl font-bold text-[rgb(48,80,105)]">€{calculateTotal()}</span>
+              <span className="text-2xl font-bold text-[rgb(48,80,105)]">{calculateTotal()} €</span>
             </div>
 
             <div className="flex gap-3">
@@ -517,8 +517,20 @@ export default function Eventos() {
                     <p className="text-xs font-bold uppercase">{format(date, 'MMM', { locale: dateLocale })}</p>
                     <p className="text-2xl font-bold">{format(date, 'dd')}</p>
                   </div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800">
-                    {event.includes_meal ? 'Con comida' : 'Sin comida'}
+                  <span className={`inline-flex items-center justify-center p-2 rounded-full transition-colors ${
+                    event.includes_meal 
+                      ? 'bg-emerald-100 text-emerald-600' 
+                      : 'bg-gray-100 text-gray-400'
+                  }`} title={event.includes_meal ? 'Con comida' : 'Sin comida'}>
+                    <img 
+                      src="/icons/burger.ico" 
+                      alt="Comida"
+                      className={`w-5 h-5 transition-all ${
+                        event.includes_meal 
+                          ? 'opacity-100' 
+                          : 'opacity-40 grayscale'
+                      }`}
+                    />
                   </span>
                 </div>
                 
