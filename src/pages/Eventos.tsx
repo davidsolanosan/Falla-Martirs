@@ -282,7 +282,7 @@ export default function Eventos() {
           
           if (!isRegistered) {
             // Nuevo miembro - inscribir
-            await onRegister([memberId], memberMeals[memberId] || false);
+            await onRegister([memberId], memberMeals[memberId] || false, event);
           } else {
             // Miembro existente - podría necesitar actualizar opciones de comida
             // Por ahora, mantenemos la inscripción existente
@@ -442,21 +442,21 @@ export default function Eventos() {
           {/* Información del evento configurada desde administración */}
           {event.includes_meal && (
             <div className="border-t pt-6">
-              <h4 className="text-lg font-semibold text-slate-800 mb-4">Información del Menú</h4>
+              <h4 className="text-lg font-semibold text-slate-800 mb-4">{t('mealInformation')}</h4>
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="space-y-2">
                   <div className="flex items-center">
-                    <span className="text-sm font-medium text-slate-600">Menú:</span>
+                    <span className="text-sm font-medium text-slate-600">{t('menu')}:</span>
                     <span className="text-sm text-slate-800 ml-2">
-                      {event.meal_type || 'No especificado'}
+                      {event.meal_type || t('notSpecified')}
                     </span>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm font-medium text-slate-600">Coste por persona:</span>
+                    <span className="text-sm font-medium text-slate-600">{t('additionalCost')}:</span>
                     <span className="text-sm text-slate-800 ml-2">
                       {event.meal_cost !== undefined && event.meal_cost !== null 
                         ? `€${event.meal_cost}` 
-                        : 'Gratuito'
+                        : t('free')
                       }
                     </span>
                   </div>
@@ -470,9 +470,9 @@ export default function Eventos() {
               <div>
                 <span className="text-lg font-semibold">{t('total')}:</span>
                 <p className="text-sm text-slate-500">
-                  {selectedMembers.length} {selectedMembers.length === 1 ? 'persona' : 'personas'}
+                  {selectedMembers.length} {selectedMembers.length === 1 ? t('person') : t('people')}
                   {event.includes_meal && selectedMembers.some(id => memberMeals[id]) && 
-                    ` • ${selectedMembers.filter(id => memberMeals[id]).length} con comida`
+                    ` • ${selectedMembers.filter(id => memberMeals[id]).length} ${t('withMeal')}`
                   }
                 </p>
               </div>
