@@ -212,7 +212,7 @@ export default function Configuracion() {
                   }`}
                 >
                   <div className="flex items-center">
-                    <span className="text-2xl mr-3">🇦🇩</span>
+                    <span className="text-2xl mr-3">�</span>
                     <div className="text-left">
                       <p className="font-medium text-slate-800">Valencià</p>
                       <p className="text-sm text-slate-500">Valenciano</p>
