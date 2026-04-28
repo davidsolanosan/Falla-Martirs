@@ -367,73 +367,52 @@ export default function Eventos() {
                   
                   return (
                     <div key={member.id} className={`border rounded-xl p-4 transition-colors ${
-                      isRegistered ? 'bg-[rgb(48,80,105)]/10 border-[rgb(48,80,105)]/20' : 'hover:bg-slate-50'
+                      selectedMembers.includes(member.id) ? 'bg-[rgb(48,80,105)]/10 border-[rgb(48,80,105)]/20' : 'hover:bg-slate-50'
                     }`}>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center">
-                          {!isRegistered ? (
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => handleMemberToggle(member.id)}
-                              disabled={deadlinePassed}
-                              className={`mr-3 h-5 w-5 rounded focus:ring-[rgb(48,80,105)] ${
-                                deadlinePassed
-                                  ? 'text-gray-300 cursor-not-allowed'
-                                  : 'text-[rgb(48,80,105)]'
-                              }`}
-                            />
-                          ) : (
-                            <div className="mr-3 h-5 w-5 bg-[rgb(48,80,105)] rounded flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-medium text-lg">{member.name} {member.surname}</p>
-                            <p className="text-sm text-slate-500">
-                              {isRegistered ? '✅ ' : ''}{categoryPrice?.price || 0}€
-                            </p>
-                          </div>
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedMembers.includes(member.id)}
+                          onChange={() => {
+                            handleMemberToggle(member.id);
+                          }}
+                          disabled={deadlinePassed}
+                          className={`mr-3 h-5 w-5 rounded focus:ring-2 focus:ring-offset-2 transition-colors ${
+                            deadlinePassed
+                              ? 'text-gray-300 cursor-not-allowed bg-gray-100 border-gray-300'
+                              : selectedMembers.includes(member.id)
+                                ? 'text-white bg-[rgb(48,80,105)] border-[rgb(48,80,105)]'
+                                : 'text-[rgb(48,80,105)] bg-white border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)]/5'
+                          }`}
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-lg">{member.name} {member.surname}</p>
+                          <p className="text-sm text-slate-500">
+                            {categoryPrice?.price || 0}€
+                          </p>
                         </div>
-                        </div>
+                      </div>
                   
                   {selectedMembers.includes(member.id) && event.includes_meal && (
                     <div className="ml-8 p-3 bg-slate-50 rounded-lg">
-                      <label className="flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={memberMeals[member.id] || false}
-                          onChange={() => handleMealToggle(member.id)}
-                          className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
-                            memberMeals[member.id] 
-                              ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]' 
-                              : 'text-slate-600 bg-white border-slate-300'
-                          }`}
-                        />
-                        {event.meal_type && (
-                          <p className="text-sm text-slate-700 font-medium">{event.meal_type}</p>
-                        )}
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={memberMeals[member.id] || false}
+                            onChange={() => handleMealToggle(member.id)}
+                            className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
+                              memberMeals[member.id] 
+                                ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]' 
+                                : 'text-slate-600 bg-white border-slate-300'
+                            }`}
+                          />
+                          {event.meal_type && (
+                            <p className="text-sm text-slate-700 font-medium">{event.meal_type}</p>
+                          )}
+                        </label>
+                      </div>
                     </div>
-                  )}
-
-                  {isRegistered && (
-                    <button
-                      onClick={() => handleUnregister(member.id)}
-                      disabled={deadlinePassed}
-                      className={`ml-auto p-2 rounded-lg transition-colors ${
-                        deadlinePassed
-                          ? 'text-gray-300 cursor-not-allowed opacity-50'
-                          : 'text-red-500 hover:bg-red-50 hover:text-red-600'
-                      }`}
-                      title={t('unregister')}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
                   )}
                 </div>
                   );
@@ -491,7 +470,7 @@ export default function Eventos() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={selectedMembers.length === 0 || isSubmitting || deadlinePassed}
+                disabled={isSubmitting || deadlinePassed}
                 className="flex-1 px-4 py-3 bg-[rgb(48,80,105)] text-white rounded-xl font-medium hover:bg-[rgb(48,80,105)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isSubmitting ? t('saving') : t('save')}
