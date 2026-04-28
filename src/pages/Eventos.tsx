@@ -11,7 +11,7 @@ export default function Eventos() {
   const { t, language } = useTranslation();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
-  const { events, loading, users, families, eventPrices, createEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
+  const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
   
   const dateLocale = language === 'va' ? ca : es;
 
@@ -139,6 +139,13 @@ export default function Eventos() {
           calculatedPrice
         });
         
+        console.log('🔍 Guardando inscripción con comida:', {
+          memberId,
+          includesMeal,
+          event_id: event.id,
+          category_id: categoryId
+        });
+        
         await createEventRegistration({
           event_id: event.id,
           user_id: memberId,
@@ -177,8 +184,25 @@ export default function Eventos() {
       .filter(member => eventRegistrations.some(r => r.event_id === event.id && r.user_id === member.id))
       .map(member => member.id);
     
+    // Inicializar memberMeals con las opciones de comida de usuarios ya inscritos
+    const initialMemberMeals = {};
+    initiallyRegisteredMembers.forEach(memberId => {
+      const registration = eventRegistrations.find(r => r.event_id === event.id && r.user_id === memberId);
+      if (registration) {
+        initialMemberMeals[memberId] = registration.includes_meal || false;
+        console.log('🔍 Cargando opción comida para miembro:', {
+          memberId,
+          registration,
+          includes_meal: registration.includes_meal,
+          valorGuardado: initialMemberMeals[memberId]
+        });
+      }
+    });
+    
+    console.log('🔍 initialMemberMeals final:', initialMemberMeals);
+
     const [selectedMembers, setSelectedMembers] = useState(initiallyRegisteredMembers);
-    const [memberMeals, setMemberMeals] = useState({});
+    const [memberMeals, setMemberMeals] = useState(initialMemberMeals);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Verificar si el plazo ha finalizado
@@ -256,11 +280,11 @@ export default function Eventos() {
           return newMeals;
         });
       } else {
-        // Si se selecciona, añadir con opción de comida por defecto
+        // Si se selecciona, añadir con opción de comida por defecto (true si el evento incluye comida)
         setSelectedMembers([...selectedMembers, memberId]);
         setMemberMeals(prev => ({
           ...prev,
-          [memberId]: event.includes_meal // Por defecto marcado si el evento incluye comida
+          [memberId]: event.includes_meal ? true : false // Por defecto marcado si el evento incluye comida
         }));
       }
     };
@@ -284,9 +308,34 @@ export default function Eventos() {
             // Nuevo miembro - inscribir
             await onRegister([memberId], memberMeals[memberId] || false, event);
           } else {
-            // Miembro existente - podría necesitar actualizar opciones de comida
-            // Por ahora, mantenemos la inscripción existente
-            console.log('Miembro ya inscrito, manteniendo registro:', memberId);
+            // Miembro existente - actualizar opciones de comida si han cambiado
+            const registration = eventRegistrations.find(r => r.event_id === event.id && r.user_id === memberId);
+            const currentMealOption = registration?.includes_meal || false;
+            const newMealOption = memberMeals[memberId] || false;
+            
+            if (currentMealOption !== newMealOption) {
+              console.log('🔍 Actualizando opción comida para miembro existente:', {
+                memberId,
+                currentMealOption,
+                newMealOption
+              });
+              
+              // Calcular el precio para este miembro
+              const member = familyMembers.find(m => m.id === memberId);
+              const categoryId = member?.category_id || '';
+              const finalEventPrice = eventPrices.find(p => p.event_id === event.id && p.category_id === categoryId);
+              const categoryPrice = finalEventPrice?.price || 0;
+              const mealCost = (newMealOption && event.meal_cost) ? event.meal_cost : 0;
+              const calculatedPrice = categoryPrice + mealCost;
+              
+              // Actualizar la inscripción existente
+              await updateEventRegistration(registration.id, {
+                includes_meal: newMealOption,
+                total_price: calculatedPrice
+              });
+            } else {
+              console.log('Miembro ya inscrito, sin cambios en comida:', memberId);
+            }
           }
         }
         
