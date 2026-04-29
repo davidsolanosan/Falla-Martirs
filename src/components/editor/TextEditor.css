@@ -1,0 +1,16 @@
+.text-editor [contenteditable]:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  position: absolute;
+}
+
+.text-editor [contenteditable]:focus:before {
+  content: none;
+}
+
+.text-editor [contenteditable] {
+  position: relative;
+  min-height: 300px;
+  line-height: 1.5;
+}

@@ -5,7 +5,7 @@ import { Settings, Globe, Lock, Smartphone, Check, Eye, EyeOff, ChevronRight, Us
 import { supabase } from '../lib/supabase';
 
 export default function Configuracion() {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const [activeTab, setActiveTab] = useState<'general' | 'security'>('general');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -90,7 +90,7 @@ export default function Configuracion() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      await logout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
@@ -192,7 +192,9 @@ export default function Configuracion() {
                   }`}
                 >
                   <div className="flex items-center">
-                    <span className="text-2xl mr-3">🇪🇸</span>
+                    <div className="w-8 h-8 mr-3 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-sm">
+                      ES
+                    </div>
                     <div className="text-left">
                       <p className="font-medium text-slate-800">Español</p>
                       <p className="text-sm text-slate-500">Castellano</p>
@@ -212,7 +214,9 @@ export default function Configuracion() {
                   }`}
                 >
                   <div className="flex items-center">
-                    <span className="text-2xl mr-3">�</span>
+                    <div className="w-8 h-8 mr-3 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm">
+                      VA
+                    </div>
                     <div className="text-left">
                       <p className="font-medium text-slate-800">Valencià</p>
                       <p className="text-sm text-slate-500">Valenciano</p>

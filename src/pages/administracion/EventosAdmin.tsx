@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
-import { Calendar, Plus, Edit2, Trash2, Users, Eye, Euro, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, Users, Eye, Euro, Clock, AlertCircle, CheckCircle, Download, Utensils } from 'lucide-react';
+import * as XLSX from 'xlsx';
 // Función para verificar si el plazo de inscripción ha finalizado
 const isRegistrationDeadlinePassed = (event) => {
   if (!event.registration_deadline) return false;
@@ -217,6 +218,50 @@ export default function EventosAdmin() {
     return registrations.reduce((total: number, reg: any) => total + (reg.total_price || 0), 0);
   };
 
+  const getMealStats = (eventId: string) => {
+    const registrations = getEventRegistrations(eventId);
+    const withMeal = registrations.filter((reg: any) => reg.includes_meal).length;
+    const withoutMeal = registrations.length - withMeal;
+    return { withMeal, withoutMeal };
+  };
+
+  const exportToExcel = (eventId: string) => {
+    const registrations = getEventRegistrations(eventId);
+    const event = events.find((e: any) => e.id === eventId);
+    
+    if (!registrations.length) {
+      alert(t('noRegistrationsToExport'));
+      return;
+    }
+
+    const excelData = registrations.map((reg: any) => {
+      const user = users.find((u: any) => u.id === reg.user_id);
+      const family = families.find((f: any) => f.id === user?.family_id);
+      const category = categories.find((c: any) => c.id === reg.category_id);
+      
+      return {
+        'Nombre usuario': `${user?.name || ''} ${user?.surname || ''}`.trim(),
+        'Familia': family?.name || '',
+        'Categoría': category?.name || '',
+        'Precio final': `€${reg.total_price || 0}`,
+        'Comida': reg.includes_meal ? 'Sí' : 'No'
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    
+    // Limitar nombre de la hoja a 31 caracteres máximo
+    const eventTitle = event?.title || 'Evento';
+    const sheetName = `Inscripciones_${eventTitle}`.substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    
+    // Formatear fecha como dd-mm-aaaa
+    const today = new Date();
+    const formattedDate = `${String(today.getDate()).padStart(2, '0')}-${String(today.getMonth() + 1).padStart(2, '0')}-${today.getFullYear()}`;
+    XLSX.writeFile(wb, `Inscripciones_${event?.title || 'Evento'}_${formattedDate}.xlsx`);
+  };
+
   const isEventActive = (event: any) => {
     return event.is_active && !isRegistrationDeadlinePassed(event);
   };
@@ -377,7 +422,7 @@ export default function EventosAdmin() {
                               </span>
                             </div>
                           ))}
-                          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100">
+                          <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-100 mt-5">
                             <span className="text-sm font-medium text-blue-700">{t('totalRegistered')}</span>
                             <span className="text-sm font-bold text-blue-700">
                               {getEventRegistrations(event.id).length} {t('people')}
@@ -386,16 +431,53 @@ export default function EventosAdmin() {
                         </div>
                       </div>
 
-                      {/* Revenue */}
-                      <div>
-                        <h4 className="text-lg font-semibold text-slate-700 mb-4">{t('revenue')}</h4>
-                        <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-green-700">{t('totalRevenue')}</span>
-                            <span className="text-xl font-bold text-green-700">
-                              €{getTotalRevenue(event.id).toFixed(2)}
-                            </span>
+                      {/* Tercera columna: Meal Stats + Revenue + Export Button */}
+                      <div className="space-y-6">
+                        {/* Meal Stats */}
+                        <div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-4 flex items-center">
+                            <Utensils className="w-5 h-5 mr-2" />
+                            {t('mealStats')}
+                          </h4>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
+                              <span className="text-sm font-medium text-orange-700">{t('withMeal')}</span>
+                              <span className="text-lg font-bold text-orange-700">
+                                {getMealStats(event.id).withMeal} {t('people')}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <span className="text-sm font-medium text-slate-700">{t('withoutMeal')}</span>
+                              <span className="text-lg font-bold text-slate-700">
+                                {getMealStats(event.id).withoutMeal} {t('people')}
+                              </span>
+                            </div>
                           </div>
+                        </div>
+
+                        {/* Revenue */}
+                        <div>
+                          <h4 className="text-lg font-semibold text-slate-700 mb-4">{t('revenue')}</h4>
+                          <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-green-700">{t('totalRevenue')}</span>
+                              <span className="text-xl font-bold text-green-700">
+                                €{getTotalRevenue(event.id).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Export Button */}
+                        <div>
+                          <button
+                            onClick={() => exportToExcel(event.id)}
+                            className="w-full flex items-center justify-center p-3 hover:opacity-90 text-white rounded-lg transition-colors"
+                            style={{ backgroundColor: 'rgb(48,80,105)' }}
+                          >
+                            <Download className="w-5 h-5 mr-2" />
+                            {t('exportToExcel')}
+                          </button>
                         </div>
                       </div>
                     </div>

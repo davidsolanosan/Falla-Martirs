@@ -1,85 +1,269 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../lib/i18n';
-import { FileText, Calendar, User } from 'lucide-react';
+import { useSupabase } from '../lib/SupabaseContext';
+import { supabase, News, NewsRead } from '../lib/supabase';
+import { FileText, Calendar, User, Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
 export default function Noticias() {
   const { t } = useTranslation();
+  const { user } = useSupabase();
+  const [news, setNews] = useState<News[]>([]);
+  const [readNews, setReadNews] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showReadNews, setShowReadNews] = useState(false);
 
-  // Datos de ejemplo - vendrán de la base de datos
-  const news = [
-    {
-      id: 1,
-      title: 'Nueva reunión de la Falla',
-      content: 'Se convoca a todos los falleros a la reunión ordinaria del próximo martes...',
-      date: '18/04/2026',
-      author: 'Administración',
-      category: 'general'
-    },
-    {
-      id: 2,
-      title: 'Fiesta de la Falla',
-      content: 'Este sábado celebraremos nuestra fiesta anual en la plaza mayor...',
-      date: '15/04/2026',
-      author: 'Comisión de Festejos',
-      category: 'eventos'
+  // Cargar noticias de Supabase
+  useEffect(() => {
+    loadNewsAndReadStatus();
+  }, [user]);
+
+  const loadNewsAndReadStatus = async () => {
+    try {
+      // Cargar todas las noticias publicadas
+      const { data: newsData, error: newsError } = await supabase
+        .from('news')
+        .select('*')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
+
+      if (newsError) {
+        console.error('Error loading news:', newsError);
+        // Si no existe la tabla, mostramos datos de ejemplo
+        setNews([
+          {
+            id: '1',
+            title: 'Bienvenida a la nueva temporada',
+            content: '<p>Estamos muy contentos de dar la bienvenida a todos los falleros a la nueva temporada 2026.</p>',
+            author: 'Juan Pérez',
+            status: 'published',
+            created_at: '2026-04-29T10:00:00Z',
+            updated_at: '2026-04-29T10:00:00Z',
+            published_at: '2026-04-29T10:00:00Z'
+          }
+        ]);
+        setReadNews([]);
+      } else {
+        setNews(newsData || []);
+        
+        // Cargar noticias leídas por el usuario solo si está autenticado
+        if (user?.id) {
+          const { data: readData, error: readError } = await supabase
+            .from('news_read')
+            .select('news_id')
+            .eq('user_id', user.id);
+
+          if (!readError && readData) {
+            setReadNews(readData.map(item => item.news_id));
+          } else {
+            setReadNews([]);
+          }
+        } else {
+          setReadNews([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setReadNews([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleMarkAsRead = async (newsId: string) => {
+    if (!readNews.includes(newsId)) {
+      // Verificar si hay usuario autenticado
+      if (!user?.id) {
+        alert('Debes iniciar sesión para marcar noticias como leídas');
+        return;
+      }
+
+      try {
+        // Guardar en Supabase que el usuario ha leído esta noticia
+        const { error } = await supabase
+          .from('news_read')
+          .insert({
+            news_id: newsId,
+            user_id: user.id,
+            read_at: new Date().toISOString()
+          });
+
+        if (error) {
+          console.error('Error marking news as read:', error);
+          alert('Error al marcar la noticia como leída');
+          return;
+        }
+
+        setReadNews([...readNews, newsId]);
+        alert(t('newsMarkedAsRead'));
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al marcar la noticia como leída');
+      }
+    }
+  };
+
+  const unreadNews = news.filter(n => n.status === 'published' && !readNews.includes(n.id));
+  const readNewsList = news.filter(n => n.status === 'published' && readNews.includes(n.id));
+
+  const NewsCard = ({ newsItem, isRead = false }: { newsItem: News; isRead?: boolean }) => (
+    <div className={`bg-white rounded-2xl shadow-sm border ${isRead ? 'border-slate-200 opacity-75' : 'border-slate-100'} overflow-hidden transition-all duration-300`}>
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className={`text-xl font-bold mb-2 ${isRead ? 'text-slate-600' : 'text-slate-800'}`}>
+              {newsItem.title}
+            </h3>
+            <div className="flex items-center space-x-4 text-sm text-slate-600">
+              <div className="flex items-center space-x-1">
+                <User className="w-4 h-4" />
+                <span>{newsItem.author}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-4 h-4" />
+                <span>{new Date(newsItem.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          </div>
+          {!isRead && (
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                Nueva
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Image */}
+        {newsItem.image_url && (
+          <div className="mb-4">
+            <img 
+              src={newsItem.image_url} 
+              alt={newsItem.title}
+              className="w-full h-48 object-cover rounded-lg"
+            />
+          </div>
+        )}
+        
+        {/* Content */}
+        <div 
+          className={`text-slate-700 mb-4 ${isRead ? 'line-clamp-2' : ''}`}
+          dangerouslySetInnerHTML={{ __html: newsItem.content }}
+        />
+        
+        {/* Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            {!isRead && (
+              <button
+                onClick={() => handleMarkAsRead(newsItem.id)}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                {t('markAsRead')}
+              </button>
+            )}
+          </div>
+          
+          {isRead && (
+            <div className="flex items-center text-sm text-slate-500">
+              <Check className="w-4 h-4 mr-1" />
+              {t('readNews')}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(48,80,105)] mx-auto mb-4"></div>
+          <p className="text-slate-600">{t('loading')}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <FileText className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">
-                {t('navNews')}
-              </h1>
-              <p className="text-slate-600">
-                {t('newsDescription')}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
+                <FileText className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                  {t('navNews')}
+                </h1>
+                <p className="text-slate-600">
+                  {unreadNews.length > 0 
+                    ? `${unreadNews.length} ${t('unreadNews').toLowerCase()}`
+                    : t('noUnreadNews')
+                  }
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* News Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {news.map((item) => (
-            <div key={item.id} className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  item.category === 'general' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                }`}>
-                  {item.category === 'general' ? t('general') : t('events')}
-                </span>
-                <span className="text-sm text-slate-500">
-                  {item.date}
-                </span>
-              </div>
-              
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                {item.title}
-              </h3>
-              
-              <p className="text-slate-600 text-sm mb-4 line-clamp-3">
-                {item.content}
-              </p>
-              
-              <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                <div className="flex items-center text-sm text-slate-500">
-                  <User className="w-4 h-4 mr-1" />
-                  {item.author}
-                </div>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                  {t('readMore')}
-                </button>
-              </div>
+        {/* Unread News */}
+        {unreadNews.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-slate-700 mb-4 flex items-center">
+              <AlertCircle className="w-5 h-5 mr-2 text-blue-600" />
+              {t('unreadNews')} ({unreadNews.length})
+            </h2>
+            <div className="space-y-6">
+              {unreadNews.map((newsItem) => (
+                <NewsCard key={newsItem.id} newsItem={newsItem} />
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* Read News Toggle */}
+        {readNewsList.length > 0 && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowReadNews(!showReadNews)}
+              className="w-full flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+                {t('readNews')} ({readNewsList.length})
+              </h2>
+              {showReadNews ? (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Read News (Collapsible) */}
+        {showReadNews && readNewsList.length > 0 && (
+          <div className="space-y-6">
+            {readNewsList.map((newsItem) => (
+              <NewsCard key={newsItem.id} newsItem={newsItem} isRead />
+            ))}
+          </div>
+        )}
+
+        {/* No News State */}
+        {unreadNews.length === 0 && readNewsList.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
+            <div className="p-3 rounded-xl bg-slate-50 w-fit mx-auto mb-4">
+              <FileText className="w-6 h-6 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-medium text-slate-800 mb-2">{t('noNews')}</h3>
+            <p className="text-slate-600">{t('noNewsDescription')}</p>
+          </div>
+        )}
       </div>
     </div>
   );

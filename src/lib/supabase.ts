@@ -32,6 +32,19 @@ export interface User {
   updated_at: string;
 }
 
+// Para compatibilidad con Supabase Auth
+export interface AuthUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    name?: string;
+    role?: string;
+  };
+  app_metadata?: {
+    role?: string;
+  };
+}
+
 export interface Family {
   id: string;
   name: string;
@@ -184,4 +197,24 @@ export interface EventRegistration {
   total_price: number;
   registered_by?: string; // ID del usuario que inscribió (representante)
   registered_at: string;
+}
+
+// Noticias
+export interface News {
+  id: string;
+  title: string;
+  content: string;
+  image_url?: string;
+  author: string;
+  status: 'draft' | 'published' | 'hidden';
+  created_at: string;
+  updated_at: string;
+  published_at?: string;
+}
+
+export interface NewsRead {
+  id: string;
+  news_id: string;
+  user_id: string;
+  read_at: string;
 }
