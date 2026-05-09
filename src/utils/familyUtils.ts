@@ -189,10 +189,10 @@ function generateFamilyFromUsers(users: User[], address: string): Family {
   console.log('=== FIN DEBUG FAMILIA ===');
 
   // IDs de todos los miembros
-  const memberIds = users.map(user => user.id);
+  const memberIds = users ? users.map(user => user.id) : [];
   
   // IDs de representantes (todos los adultos)
-  const representativeIds = adults.map(user => user.id);
+  const representativeIds = adults ? adults.map(user => user.id) : [];
 
   return {
     id: '', // Se generará en la base de datos
@@ -270,8 +270,8 @@ export function updateFamiliesWithNewUsers(existingFamilies: Family[], newUsers:
     const existing = familyMap.get(family.address);
     if (existing) {
       // Actualizar familia existente con nuevos miembros
-      existing.members = [...new Set([...existing.members, ...family.members])];
-      existing.representativeIds = [...new Set([...existing.representativeIds, ...family.representativeIds])];
+      existing.members = [...new Set([...(existing.members || []), ...family.members])];
+      existing.representativeIds = [...new Set([...(existing.representativeIds || []), ...family.representativeIds])];
       existing.updated_at = new Date().toISOString();
     } else {
       // Nueva familia

@@ -19,7 +19,6 @@ import Eventos from './pages/Eventos';
 import Documentos from './pages/Documentos';
 import Crear from './pages/Crear';
 import Configuracion from './pages/Configuracion';
-import PermissionManager from './components/admin/PermissionManager';
 
 // Import de páginas de administración
 import InicioAdmin from './pages/administracion/InicioAdmin';
@@ -101,14 +100,7 @@ function AppWithAuth() {
               
                             
                             
-              <Route path="/configuracion/permisos" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PermissionManager />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              
+                            
               <Route path="/eventos" element={
                 <ProtectedRoute>
                   <Layout>
@@ -146,6 +138,14 @@ function AppWithAuth() {
                 <ProtectedRoute>
                   <Layout>
                     <InicioAdmin />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/censo" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Censo />
                   </Layout>
                 </ProtectedRoute>
               } />

@@ -28,6 +28,10 @@ export interface User {
   correu?: string;
   cargo?: string;
   recompensa?: string;
+  // Campos de autenticación
+  password_hash?: string;
+  first_login?: boolean;
+  password_changed_at?: string;
   created_at: string;
   updated_at: string;
 }

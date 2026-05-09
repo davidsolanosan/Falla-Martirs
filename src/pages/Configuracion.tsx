@@ -37,6 +37,13 @@ export default function Configuracion() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validaciones básicas
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setErrorMessage('❌ Completa todos los campos');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setErrorMessage(t('passwordsDoNotMatch'));
       setTimeout(() => setErrorMessage(''), 3000);
@@ -49,39 +56,122 @@ export default function Configuracion() {
       return;
     }
 
+    if (passwordData.newPassword === passwordData.currentPassword) {
+      setErrorMessage('La nueva contraseña debe ser diferente a la contraseña actual');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      // Verificar contraseña actual
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user?.email || '',
-        password: passwordData.currentPassword
-      });
-
-      if (signInError) {
-        setErrorMessage(t('currentPasswordIncorrect'));
+      console.log('🔍 Iniciando cambio de contraseña simplificado');
+      console.log('🔍 Usuario del contexto:', user);
+      
+      // Obtener email del usuario del contexto
+      const userEmail = user?.email;
+      const userId = user?.id;
+      
+      if (!userEmail) {
+        console.error('❌ No se pudo obtener el email del usuario');
+        setErrorMessage('❌ No se pudo obtener el email del usuario');
         setIsLoading(false);
         setTimeout(() => setErrorMessage(''), 3000);
         return;
       }
 
-      // Actualizar contraseña
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: passwordData.newPassword
-      });
+      console.log('🔍 Email del usuario:', userEmail);
+
+      // Verificar contraseña actual con password_hash de la tabla users
+      const { data: userData, error: hashError } = await supabase
+        .from('users')
+        .select('password_hash')
+        .eq('id', userId)
+        .single();
+
+      console.log('🔍 Datos de contraseña:', { userData, hashError });
+
+      if (hashError || !userData) {
+        console.error('❌ Error obteniendo datos del usuario:', hashError);
+        setErrorMessage('Error obteniendo datos del usuario');
+        setIsLoading(false);
+        setTimeout(() => setErrorMessage(''), 3000);
+        return;
+      }
+
+      // Si no hay password_hash, generamos contraseña inicial
+      if (!userData.password_hash) {
+        console.log('🔍 Usuario sin password_hash, generando contraseña inicial...');
+        
+        const { generateInitialPassword } = await import('../utils/authUtils');
+        
+        if (!user?.dni || !user?.birth_year) {
+          console.error('❌ No hay DNI o fecha de nacimiento');
+          setErrorMessage('No se puede generar contraseña inicial. Faltan DNI o fecha de nacimiento.');
+          setIsLoading(false);
+          setTimeout(() => setErrorMessage(''), 5000);
+          return;
+        }
+
+        const initialPassword = generateInitialPassword(user.dni, user.birth_year);
+        console.log('🔍 Contraseña inicial:', initialPassword);
+        
+        if (passwordData.currentPassword !== initialPassword) {
+          console.error('❌ Contraseña actual incorrecta');
+          setErrorMessage(`Contraseña incorrecta. La contraseña inicial es: ${initialPassword}`);
+          setIsLoading(false);
+          setTimeout(() => setErrorMessage(''), 10000);
+          return;
+        }
+      } else {
+        // Si hay password_hash, verificamos con bcrypt
+        const { verifyPassword } = await import('../utils/authUtils');
+        const isCurrentPasswordValid = await verifyPassword(passwordData.currentPassword, userData.password_hash);
+
+        console.log('🔍 Verificación contraseña:', { isValid: isCurrentPasswordValid });
+
+        if (!isCurrentPasswordValid) {
+          console.error('❌ Contraseña actual incorrecta');
+          setErrorMessage('Contraseña actual incorrecta');
+          setIsLoading(false);
+          setTimeout(() => setErrorMessage(''), 3000);
+          return;
+        }
+      }
+
+      // Generar hash de la nueva contraseña
+      const { hashPassword } = await import('../utils/authUtils');
+      const newPasswordHash = await hashPassword(passwordData.newPassword);
+
+      // Actualizar contraseña en la tabla users
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          password_hash: newPasswordHash,
+          has_temp_password: false
+        })
+        .eq('id', userId);
+
+      console.log('🔍 Resultado actualización:', { updateError });
 
       if (updateError) {
-        setErrorMessage(t('errorUpdatingPassword'));
-        setTimeout(() => setErrorMessage(''), 3000);
-      } else {
-        setSuccessMessage(t('passwordChanged'));
-        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        setIsChangingPassword(false);
-        setTimeout(() => setSuccessMessage(''), 3000);
+        console.error('❌ Error actualizando contraseña:', updateError);
+        setErrorMessage(`Error actualizando contraseña: ${updateError.message}`);
+        setIsLoading(false);
+        setTimeout(() => setErrorMessage(''), 5000);
+        return;
       }
+
+      console.log('✅ Contraseña actualizada correctamente');
+      setSuccessMessage('¡Contraseña cambiada correctamente!');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setIsChangingPassword(false);
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
     } catch (error) {
-      setErrorMessage(t('errorUpdatingPassword'));
+      console.error('❌ Error inesperado:', error);
+      setErrorMessage('❌ Error inesperado al cambiar la contraseña');
       setTimeout(() => setErrorMessage(''), 3000);
     } finally {
       setIsLoading(false);

@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { useTranslation } from '../../lib/i18n';
 import { generateFamiliesFromUsers, updateFamiliesWithNewUsers } from '../../utils/familyUtils';
+import { supabase } from '../../lib/supabase';
 import { Users, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AutoFamilyGeneratorProps {
@@ -11,13 +12,41 @@ interface AutoFamilyGeneratorProps {
 }
 
 export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProps) {
-  const { users, families, createFamily, updateFamily } = useSupabase();
+  const { users, families, createFamily, updateFamily, deleteFamily, deleteFamilyWithoutRefresh } = useSupabase();
   const { t } = useTranslation();
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedFamilies, setGeneratedFamilies] = useState<any[]>([]);
   const [existingFamilies, setExistingFamilies] = useState<any[]>([]);
   const [previewMode, setPreviewMode] = useState(true);
+  const [regenerateAll, setRegenerateAll] = useState(false);
+
+  // Función para obtener nombres de los miembros
+  const getMemberNames = (family: any) => {
+    if (!family.members || !Array.isArray(family.members)) return [];
+    
+    return family.members.map((memberId: string) => {
+      const user = users.find(u => u.id === memberId);
+      if (!user) return 'Usuario desconocido';
+      
+      const name = `${user.name || ''} ${user.surname || ''}`.trim();
+      const isRepresentative = family.representativeIds && family.representativeIds.includes(memberId);
+      
+      return {
+        name: name || 'Sin nombre',
+        isRepresentative
+      };
+    });
+  };
+
+  // Función para ordenar familias alfabéticamente
+  const sortFamilies = (families: any[]) => {
+    return [...families].sort((a, b) => {
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'es', { sensitivity: 'base' });
+    });
+  };
 
   const generateFamilies = async () => {
     console.log('=== BOTÓN GENERAR FAMILIAS PRESIONADO ===');
@@ -32,19 +61,30 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
       console.log('Familias generadas:', newFamilies.length);
       
       // Identificar familias nuevas vs existentes
-      const existing = families.filter(f => 
-        newFamilies.some(nf => nf.address === f.address)
-      );
+      let existing, trulyNew;
       
-      const trulyNew = newFamilies.filter(nf => 
-        !families.some(f => f.address === nf.address)
-      );
+      if (regenerateAll) {
+        // Si regeneramos todo, todas las familias son "nuevas"
+        existing = [];
+        trulyNew = newFamilies;
+        console.log('Modo: REGENERAR TODAS LAS FAMILIAS');
+      } else {
+        // Modo normal: solo crear familias nuevas
+        existing = families.filter(f => 
+          newFamilies.some(nf => nf.address === f.address)
+        );
+        
+        trulyNew = newFamilies.filter(nf => 
+          !families.some(f => f.address === nf.address)
+        );
+        console.log('Modo: SOLO FAMILIAS NUEVAS');
+      }
       
       console.log('Familias existentes encontradas:', existing.length);
       console.log('Familias realmente nuevas:', trulyNew.length);
       
-      setExistingFamilies(existing);
-      setGeneratedFamilies(trulyNew);
+      setExistingFamilies(sortFamilies(existing));
+      setGeneratedFamilies(sortFamilies(trulyNew));
     } catch (error) {
       console.error("Error generating families:", error);
       alert("Error al generar familias. Revisa la consola para más detalles.");
@@ -56,14 +96,98 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
   const createFamilies = async () => {
     setIsGenerating(true);
     try {
+      // Si regeneramos todo, eliminar todas las familias existentes primero
+      if (regenerateAll) {
+        console.log('=== ELIMINANDO FAMILIAS EXISTENTES ===');
+        console.log('Familias a eliminar:', families.length);
+        
+        for (const family of families) {
+          console.log('Eliminando familia:', family.id, family.name);
+          await deleteFamilyWithoutRefresh(family.id);
+        }
+        
+        // También eliminar el family_id de todos los usuarios
+        console.log('=== LIMPIANDO family_id DE USUARIOS ===');
+        await supabase
+          .from('users')
+          .update({ family_id: null })
+          .not('family_id', 'is', null);
+      }
+      
       // Crear solo las familias nuevas
-      for (const family of generatedFamilies) {
-        await createFamily({
+      const createdFamilyIds: string[] = [];
+      console.log('=== CREANDO FAMILIAS ===');
+      console.log('Familias a crear:', generatedFamilies.length);
+      
+      for (let i = 0; i < generatedFamilies.length; i++) {
+        const family = generatedFamilies[i];
+        console.log(`Creando familia ${i + 1}:`, family.name, family.address, `Miembros: ${family.members?.length || 0}`);
+        
+        const createdFamily = await createFamily({
           name: family.name,
           address: family.address,
           phone: family.phone
         });
+        
+        if (createdFamily && createdFamily.id) {
+          createdFamilyIds.push(createdFamily.id);
+          console.log(`✅ Familia creada con ID: ${createdFamily.id}`);
+        } else {
+          console.log(`❌ Error creando familia:`, family.name);
+        }
       }
+      
+      console.log('=== RESUMEN DE CREACIÓN ===');
+      console.log('Familias a crear:', generatedFamilies.length);
+      console.log('Familias creadas exitosamente:', createdFamilyIds.length);
+      console.log('IDs de familias creadas:', createdFamilyIds);
+      
+      // Asignar usuarios a las familias creadas
+      console.log('=== ASIGNANDO USUARIOS A FAMILIAS ===');
+      console.log('Familias creadas:', createdFamilyIds.length);
+      console.log('Total usuarios a asignar:', generatedFamilies.reduce((total, family) => total + (family.members?.length || 0), 0));
+      
+      console.log('=== INICIANDO ASIGNACIÓN DE USUARIOS ===');
+      console.log('Total familias generadas:', generatedFamilies.length);
+      console.log('Total IDs de familias creadas:', createdFamilyIds.length);
+      
+      for (let i = 0; i < generatedFamilies.length; i++) {
+        const family = generatedFamilies[i];
+        const familyId = createdFamilyIds[i];
+        
+        console.log(`\n--- Procesando familia ${i + 1} ---`);
+        console.log('Nombre familia:', family.name);
+        console.log('ID familia:', familyId);
+        console.log('Miembros a asignar:', family.members?.length || 0);
+        console.log('IDs de miembros:', family.members);
+        
+        if (familyId && family.members) {
+          // Asignar cada usuario a su familia
+          for (let j = 0; j < family.members.length; j++) {
+            const userId = family.members[j];
+            console.log(`  Asignando usuario ${j + 1}/${family.members.length}:`, userId, 'a familia', familyId);
+            
+            const { data, error } = await supabase
+              .from('users')
+              .update({ family_id: familyId })
+              .eq('id', userId)
+              .select();
+            
+            if (error) {
+              console.error('  ❌ Error asignando usuario', userId, 'a familia', familyId, ':', error);
+            } else {
+              console.log('  ✅ Usuario', userId, 'asignado correctamente a familia', familyId);
+              console.log('  📄 Datos actualizados:', data);
+            }
+          }
+        } else {
+          console.log('  ⚠️  Saltando familia - No hay familyId o members:', { familyId, members: family.members });
+        }
+      }
+      
+      console.log('=== VERIFICACIÓN FINAL ===');
+      console.log('Familias creadas:', createdFamilyIds.length);
+      console.log('Usuarios asignados:', generatedFamilies.reduce((total, family) => total + (family.members?.length || 0), 0));
       
       setPreviewMode(false);
       setTimeout(() => {
@@ -98,6 +222,10 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
         }
       }
       
+      console.log('=== VERIFICACIÓN FINAL ===');
+      console.log('Familias creadas:', createdFamilyIds.length);
+      console.log('Usuarios asignados:', generatedFamilies.reduce((total, family) => total + (family.members?.length || 0), 0));
+      
       setPreviewMode(false);
       setTimeout(() => {
         onClose();
@@ -123,6 +251,23 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
                 Las familias se agrupan por dirección exacta. El nombre se genera con los apellidos de los adultos mayores.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Opción de regeneración */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="regenerateAll"
+              checked={regenerateAll}
+              onChange={(e) => setRegenerateAll(e.target.checked)}
+              className="h-4 w-4 text-amber-600 focus:ring-amber-500 border-amber-300 rounded"
+            />
+            <label htmlFor="regenerateAll" className="ml-3 text-sm text-amber-900">
+              <span className="font-medium">Regenerar todas las familias</span>
+              <span className="block text-amber-700">Elimina las familias existentes y crea todas las familias desde cero</span>
+            </label>
           </div>
         </div>
 
@@ -176,22 +321,51 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
               <div>
                 <h3 className="text-lg font-medium text-slate-900 mb-3">Familias a Crear</h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {generatedFamilies.map((family, index) => (
-                    <div key={index} className="bg-white border border-slate-200 rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-slate-900">{family.name}</p>
-                          <p className="text-sm text-slate-500">{family.address}</p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {family.members.length} miembros • {family.representativeIds.length} representantes
-                          </p>
+                  {generatedFamilies.map((family, index) => {
+                    const memberNames = getMemberNames(family);
+                    return (
+                      <div key={index} className="bg-white border border-slate-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{family.name}</p>
+                            <p className="text-sm text-slate-500">{family.address}</p>
+                            
+                            {/* Lista de miembros */}
+                            {memberNames.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-slate-400 mb-1">
+                                  {memberNames.length} miembro{memberNames.length !== 1 ? 's' : ''}
+                                  {memberNames.filter(m => m.isRepresentative).length > 0 && 
+                                    ` • ${memberNames.filter(m => m.isRepresentative).length} representante${memberNames.filter(m => m.isRepresentative).length !== 1 ? 's' : ''}`
+                                  }
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {memberNames.map((member, idx) => (
+                                    <span 
+                                      key={idx}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                        member.isRepresentative 
+                                          ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                          : 'bg-gray-100 text-gray-700 border border-gray-200'
+                                      }`}
+                                    >
+                                      {member.name}
+                                      {member.isRepresentative && (
+                                        <span className="ml-1 text-blue-600">★</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full ml-3">
+                            NUEVO
+                          </span>
                         </div>
-                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                          NUEVO
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -201,28 +375,57 @@ export function AutoFamilyGenerator({ isOpen, onClose }: AutoFamilyGeneratorProp
               <div>
                 <h3 className="text-lg font-medium text-slate-900 mb-3">Familias Existentes</h3>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {existingFamilies.map((family, index) => (
-                    <div key={family.id} className="bg-white border border-slate-200 rounded-lg p-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-slate-900">{family.name}</p>
-                          <p className="text-sm text-slate-500">{family.address}</p>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {family.members.length} miembros • {family.representativeIds.length} representantes
-                          </p>
+                  {existingFamilies.map((family, index) => {
+                    const memberNames = getMemberNames(family);
+                    return (
+                      <div key={family.id} className="bg-white border border-slate-200 rounded-lg p-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{family.name}</p>
+                            <p className="text-sm text-slate-500">{family.address}</p>
+                            
+                            {/* Lista de miembros */}
+                            {memberNames.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <p className="text-xs text-slate-400 mb-1">
+                                  {memberNames.length} miembro{memberNames.length !== 1 ? 's' : ''}
+                                  {memberNames.filter(m => m.isRepresentative).length > 0 && 
+                                    ` • ${memberNames.filter(m => m.isRepresentative).length} representante${memberNames.filter(m => m.isRepresentative).length !== 1 ? 's' : ''}`
+                                  }
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {memberNames.map((member, idx) => (
+                                    <span 
+                                      key={idx}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                        member.isRepresentative 
+                                          ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                                          : 'bg-gray-100 text-gray-700 border border-gray-200'
+                                      }`}
+                                    >
+                                      {member.name}
+                                      {member.isRepresentative && (
+                                        <span className="ml-1 text-blue-600">★</span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full ml-3">
+                            EXISTE
+                          </span>
                         </div>
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">
-                          EXISTE
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
 
             {/* Botones de acción */}
-            {previewMode && (
+            {console.log('=== VERIFICACIÓN BOTÓN ===', { previewMode, generatedFamiliesLength: generatedFamilies.length, isGenerating }) || previewMode && (
               <div className="flex justify-center space-x-4 pt-4 border-t border-slate-200">
                 {generatedFamilies.length > 0 && (
                   <button

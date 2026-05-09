@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration } from './supabase';
+import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
   user: User | null;
@@ -27,6 +28,7 @@ interface SupabaseContextType {
   createFamily: (family: Omit<Family, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateFamily: (id: string, family: Partial<Family>) => Promise<void>;
   deleteFamily: (id: string) => Promise<void>;
+  deleteFamilyWithoutRefresh: (id: string) => Promise<void>;
   createUser: (user: Omit<User, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateUser: (id: string, user: Partial<User>) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
@@ -39,8 +41,8 @@ interface SupabaseContextType {
   createLotteryPrice: (price: Omit<MonthlyLotteryPrice, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateLotteryPrice: (id: string, price: Partial<MonthlyLotteryPrice>) => Promise<void>;
   deleteLotteryPrice: (id: string) => Promise<void>;
-  createLotteryDate: (lottery: Omit<LotteryDate, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateLotteryDate: (id: string, lottery: Partial<LotteryDate>) => Promise<void>;
+  createLotteryDate: (date: Omit<LotteryDate, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateLotteryDate: (id: string, date: Partial<LotteryDate>) => Promise<void>;
   deleteLotteryDate: (id: string) => Promise<void>;
   createLotteryTicket: (ticket: Omit<LotteryTicket, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateLotteryTicket: (id: string, ticket: Partial<LotteryTicket>) => Promise<void>;
@@ -50,7 +52,7 @@ interface SupabaseContextType {
   deleteLotteryPrize: (id: string) => Promise<void>;
   
   // Event CRUD functions
-  createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => Promise<Event>;
+  createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateEvent: (id: string, event: Partial<Event>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   createEventPrice: (price: Omit<EventPrice, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -73,6 +75,12 @@ interface SupabaseContextType {
   refreshEvents: () => Promise<void>;
   refreshEventPrices: () => Promise<void>;
   refreshEventRegistrations: () => Promise<void>;
+  refreshFamilyRepresentatives: () => Promise<void>;
+  
+  // Funciones de autenticación
+  loginUser: (email: string, password: string) => Promise<{user: User, isFirstLogin: boolean}>;
+  changePassword: (userId: string, newPassword: string) => Promise<void>;
+  initializeUserPasswords: () => Promise<void>;
 }
 
 export const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -91,6 +99,15 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [eventPrices, setEventPrices] = useState<EventPrice[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
+  
+  // Banderas para evitar cargas múltiples
+  const [isLoadingLotteryDates, setIsLoadingLotteryDates] = useState(false);
+  const [isLoadingLotteryTickets, setIsLoadingLotteryTickets] = useState(false);
+  const [isLoadingLotteryPrizes, setIsLoadingLotteryPrizes] = useState(false);
+  
+  // Bandera global para controlar la carga inicial
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -166,6 +183,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       await refreshFamilies();
+      
+      // Devolver la primera familia creada
+      return data && data.length > 0 ? data[0] : null;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear familia');
       throw err;
@@ -207,6 +227,21 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       await refreshFamilies();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar familia');
+      throw err;
+    }
+  };
+
+  const deleteFamilyWithoutRefresh = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('families')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      // No actualizar automáticamente
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar familia');
       throw err;
@@ -413,7 +448,14 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshLotteryDates = async () => {
+    // Evitar cargas múltiples
+    if (isLoadingLotteryDates) {
+      console.log('Lottery dates already loading, skipping...');
+      return;
+    }
+    
     try {
+      setIsLoadingLotteryDates(true);
       console.log('Loading lottery dates...');
       const { data, error } = await supabase
         .from('lottery_dates')
@@ -425,17 +467,26 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         setLotteryDates([]);
         throw error;
       }
-      console.log('Lottery dates loaded:', data);
+      console.log('Lottery dates loaded:', data?.length || 0, 'items');
       setLotteryDates(data || []);
     } catch (err) {
       console.error('Exception loading lottery dates:', err);
       setLotteryDates([]);
       throw err;
+    } finally {
+      setIsLoadingLotteryDates(false);
     }
   };
 
   const refreshLotteryTickets = async () => {
+    // Evitar cargas múltiples
+    if (isLoadingLotteryTickets) {
+      console.log('Lottery tickets already loading, skipping...');
+      return;
+    }
+    
     try {
+      setIsLoadingLotteryTickets(true);
       console.log('Loading lottery tickets...');
       const { data, error } = await supabase
         .from('lottery_tickets')
@@ -447,17 +498,26 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         setLotteryTickets([]);
         throw error;
       }
-      console.log('Lottery tickets loaded:', data);
+      console.log('Lottery tickets loaded:', data?.length || 0, 'items');
       setLotteryTickets(data || []);
     } catch (err) {
       console.error('Exception loading lottery tickets:', err);
       setLotteryTickets([]);
       throw err;
+    } finally {
+      setIsLoadingLotteryTickets(false);
     }
   };
 
   const refreshLotteryPrizes = async () => {
+    // Evitar cargas múltiples
+    if (isLoadingLotteryPrizes) {
+      console.log('Lottery prizes already loading, skipping...');
+      return;
+    }
+    
     try {
+      setIsLoadingLotteryPrizes(true);
       console.log('Loading lottery prizes...');
       const { data, error } = await supabase
         .from('lottery_prizes')
@@ -469,12 +529,14 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         setLotteryPrizes([]);
         throw error;
       }
-      console.log('Lottery prizes loaded:', data);
+      console.log('Lottery prizes loaded:', data?.length || 0, 'items');
       setLotteryPrizes(data || []);
     } catch (err) {
       console.error('Exception loading lottery prizes:', err);
       setLotteryPrizes([]);
       throw err;
+    } finally {
+      setIsLoadingLotteryPrizes(false);
     }
   };
 
@@ -970,7 +1032,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000); // Forzar límite alto para asegurar todos los usuarios
       
       if (error) {
         console.error('Error loading users:', error);
@@ -1037,11 +1100,129 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Funciones de autenticación
+  const loginUser = async (email: string, password: string) => {
+    try {
+      if (!validateEmail(email)) {
+        throw new Error('Email inválido');
+      }
+
+      // Buscar usuario por email
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      if (userError || !userData) {
+        throw new Error('Usuario no encontrado');
+      }
+
+      // Generar contraseña esperada
+      const expectedPassword = generateInitialPassword(userData.dni || '', userData.birth_year || '');
+      
+      // Verificar si tiene password_hash (ya cambió contraseña)
+      if (userData.password_hash) {
+        // Usar contraseña hasheada
+        const isValidPassword = await verifyPassword(password, userData.password_hash);
+        if (!isValidPassword) {
+          throw new Error('Contraseña incorrecta');
+        }
+        
+        return {
+          user: userData,
+          isFirstLogin: false
+        };
+      } else {
+        // Usar contraseña inicial (DNI + año)
+        if (password !== expectedPassword) {
+          throw new Error('Contraseña incorrecta. Use: DNI + año de nacimiento');
+        }
+        
+        return {
+          user: userData,
+          isFirstLogin: true
+        };
+      }
+    } catch (err) {
+      console.error('Error en login:', err);
+      throw err;
+    }
+  };
+
+  const changePassword = async (userId: string, newPassword: string) => {
+    try {
+      // Hashear nueva contraseña
+      const passwordHash = await hashPassword(newPassword);
+      
+      // Actualizar usuario
+      const { error } = await supabase
+        .from('users')
+        .update({
+          password_hash: passwordHash,
+          first_login: false,
+          password_changed_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      // Actualizar estado local
+      await refreshUsers();
+    } catch (err) {
+      console.error('Error cambiando contraseña:', err);
+      throw err;
+    }
+  };
+
+  const initializeUserPasswords = async () => {
+    try {
+      console.log('Inicializando contraseñas de usuarios...');
+      
+      // Obtener todos los usuarios sin password_hash
+      const { data: usersWithoutPassword, error } = await supabase
+        .from('users')
+        .select('*')
+        .is('password_hash', null);
+
+      if (error) throw error;
+      
+      console.log(`Usuarios sin contraseña: ${usersWithoutPassword?.length || 0}`);
+      
+      // Para cada usuario, establecer first_login = true
+      for (const user of usersWithoutPassword || []) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            first_login: true
+          })
+          .eq('id', user.id);
+          
+        if (updateError) {
+          console.error(`Error actualizando usuario ${user.id}:`, updateError);
+        }
+      }
+      
+      console.log('Contraseñas inicializadas correctamente');
+      await refreshUsers();
+    } catch (err) {
+      console.error('Error inicializando contraseñas:', err);
+      throw err;
+    }
+  };
+
   // Load initial data
   useEffect(() => {
+    // Evitar cargas múltiples
+    if (hasLoadedInitialData) {
+      console.log('Initial data already loaded, skipping...');
+      return;
+    }
+
     const loadData = async () => {
       try {
         setLoading(true);
+        setHasLoadedInitialData(true);
         
         // REACTIVAR CARGA DE DATOS - RLS está arreglado
         console.log('Loading data from Supabase...');
@@ -1068,6 +1249,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.error('Error in loadData:', err);
         setError(err instanceof Error ? err.message : 'Error al cargar datos');
+        // Resetear la bandera si hubo error para permitir reintentar
+        setHasLoadedInitialData(false);
       } finally {
         setLoading(false);
       }
@@ -1113,7 +1296,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       // No hay subscription que limpiar - está deshabilitado
       console.log('SupabaseContext: Auth listener deshabilitado');
     };
-  }, []);
+  }, [hasLoadedInitialData]); // Añadir dependencia explícita
 
   const value = {
     user,
@@ -1137,6 +1320,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     createFamily,
     updateFamily,
     deleteFamily,
+    deleteFamilyWithoutRefresh,
     createUser,
     updateUser,
     deleteUser,
@@ -1179,6 +1363,11 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshEvents,
     refreshEventPrices,
     refreshEventRegistrations,
+    refreshFamilyRepresentatives,
+    // Funciones de autenticación
+    loginUser,
+    changePassword,
+    initializeUserPasswords,
   };
 
   return (

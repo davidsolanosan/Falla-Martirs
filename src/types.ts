@@ -1,4 +1,4 @@
-export type Role = 'master_admin' | 'admin' | 'directiva' | 'delegado_loteria' | 'delegado_festejos' | 'fallero';
+export type Role = 'master_admin' | 'admin' | 'user';
 
 export interface MonthlyPayment {
   totalAmount: number; // cuota mensual según categoría

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { useSupabase } from '../../lib/SupabaseContext';
+import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from '../../lib/i18n';
 import { User } from '../../lib/supabase';
 
@@ -12,7 +13,11 @@ interface UserFormModalProps {
 
 export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProps) {
   const { families, categories, createUser, updateUser } = useSupabase();
+  const { user } = useAuth();
   const { t } = useTranslation();
+  
+  // Verificar si el usuario actual es master_admin
+  const isMasterAdmin = user?.role === 'master_admin';
   
   const [formData, setFormData] = useState<Partial<User>>({
     name: '',
@@ -164,15 +169,15 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Seleccionar...</option>
-                {families.map(family => (
+                {families.sort((a, b) => a.name.localeCompare(b.name)).map(family => (
                   <option key={family.id} value={family.id}>{family.name}</option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Tercera fila: Campos cortos en 4 columnas */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Tercera fila: Campos cortos en 5 columnas */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">DNI</label>
               <input
@@ -188,6 +193,16 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Nacimiento</label>
+              <input
+                type="text"
+                value={formData.birth_year}
+                onChange={(e) => setFormData({ ...formData, birth_year: e.target.value })}
+                placeholder="dd/mm/aaaa o aaaa"
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -279,12 +294,25 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">{t('colRole')}</label>
-              <input
-                type="text"
-                value={formData.cargo}
-                onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+              {isMasterAdmin ? (
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="user">Usuario</option>
+                  <option value="admin">Administrador</option>
+                  <option value="master_admin">Master Admin</option>
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={formData.role || 'user'}
+                  disabled
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-500 cursor-not-allowed"
+                  readOnly
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">{t('colReward')}</label>

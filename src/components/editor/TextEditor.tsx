@@ -8,7 +8,6 @@ interface TextEditorProps {
 }
 
 export default function TextEditor({ value, onChange, placeholder }: TextEditorProps) {
-  const [content, setContent] = useState(value || '');
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [isUnderline, setIsUnderline] = useState(false);
@@ -18,21 +17,25 @@ export default function TextEditor({ value, onChange, placeholder }: TextEditorP
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editorRef.current && content !== value) {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
       editorRef.current.innerHTML = value || '';
-      setContent(value || '');
     }
   }, [value]);
 
-  const applyFormat = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
-    editorRef.current?.focus();
+  const applyFormat = (command: string, formatValue?: string) => {
+    if (editorRef.current) {
+      document.execCommand(command, false, formatValue);
+      editorRef.current.focus();
+      
+      // Notificar el cambio después de aplicar formato
+      const newContent = editorRef.current.innerHTML;
+      onChange(newContent);
+    }
   };
 
   const handleContentChange = () => {
     if (editorRef.current) {
       const newContent = editorRef.current.innerHTML;
-      setContent(newContent);
       onChange(newContent);
     }
   };

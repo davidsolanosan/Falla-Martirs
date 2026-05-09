@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { User, Role } from '../lib/supabase';
+import { generateInitialPassword, verifyPassword, hashPassword } from '../utils/authUtils';
 import { 
-  hashPassword, 
   generateResetToken, 
   validatePassword
 } from '../lib/auth';
-import { hasPermission, canAccessRoute, Role } from '../lib/permissions';
+import { hasPermission, canAccessRoute } from '../lib/permissions';
 
 export interface AuthUser {
   id: string;
@@ -14,62 +15,113 @@ export interface AuthUser {
   surname?: string;
   role?: Role;
   has_temp_password?: boolean;
+  first_login?: boolean;
+  dni?: string;
+  birth_year?: string;
+  family_id?: string;
 }
 
 export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => Promise<void>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser; isFirstLogin?: boolean }>;
+  logout: () => Promise<{ success: boolean; error?: string }>;
+  changePassword: (userId: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permission: string) => boolean;
   canAccessRoute: (route: string) => boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Escuchar cambios de autenticación - versión funcional
+  // Check for existing session on mount
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('AuthStateChange:', { event: _event, session: session?.user?.email });
-      
-      if (session?.user) {
-        // Obtener datos del usuario
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (data && !error) {
-          setUser({
-            id: data.id,
-            email: data.email,
-            name: data.name,
-            surname: data.surname,
-            role: data.role as Role,
-            has_temp_password: data.has_temp_password
-          });
+        if (session?.user) {
+          // Obtener datos del usuario desde la tabla users
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (error) {
+            console.error('Error loading user data:', error);
+            return;
+          }
+
+          if (userData) {
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              surname: userData.surname,
+              role: userData.role as Role,
+              has_temp_password: userData.has_temp_password,
+              first_login: userData.first_login,
+              dni: userData.dni,
+              birth_year: userData.birth_year
+            });
+          }
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            // Obtener datos del usuario desde la tabla users
+            const { data: userData, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (error) {
+              console.error('Error loading user data:', error);
+              return;
+            }
+
+            if (userData) {
+              setUser({
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                surname: userData.surname,
+                role: userData.role as Role,
+                has_temp_password: userData.has_temp_password,
+                first_login: userData.first_login,
+                dni: userData.dni,
+                birth_year: userData.birth_year,
+                family_id: userData.family_id
+              });
+            }
+          } catch (error) {
+            console.error('Error in SIGNED_IN handler:', error);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -84,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('email', email.toLowerCase())
         .single();
 
       if (userError || !userData) {
@@ -92,27 +144,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: 'Usuario no encontrado' };
       }
 
+      console.log('Usuario encontrado:', userData.email, 'DNI:', userData.dni, 'Birth_year:', userData.birth_year);
+
       // Verificar contraseña
       if (email === 'newalfree@gmail.com' && password === 'SUPER123A1980') {
         // Bypass para superusuario
         console.log('✅ Acceso superusuario');
-      } else if (password !== userData.password_hash) {
-        console.error('Contraseña incorrecta');
-        return { success: false, error: 'Contraseña incorrecta' };
+      } else {
+        // Generar contraseña esperada
+        const expectedPassword = generateInitialPassword(userData.dni || '', userData.birth_year || '');
+        console.log('Contraseña esperada:', expectedPassword);
+        console.log('Contraseña introducida:', password);
+        
+        // Verificar si tiene password_hash (ya cambió contraseña)
+        if (userData.password_hash) {
+          console.log('Usuario tiene password_hash, verificando con bcrypt...');
+          // Usar contraseña hasheada
+          const isValidPassword = await verifyPassword(password, userData.password_hash);
+          if (!isValidPassword) {
+            console.error('Contraseña hasheada incorrecta');
+            return { success: false, error: 'Contraseña incorrecta' };
+          }
+          console.log('✅ Contraseña hasheada verificada');
+        } else {
+          console.log('Usuario sin password_hash, usando contraseña inicial...');
+          // Usar contraseña inicial (DNI + año)
+          if (password !== expectedPassword) {
+            console.error('Contraseña inicial incorrecta');
+            return { success: false, error: 'Contraseña incorrecta. Use: DNI + año de nacimiento' };
+          }
+          console.log('✅ Contraseña inicial verificada');
+        }
       }
 
       // Establecer usuario en el contexto
-      setUser({
+      const authUser = {
         id: userData.id,
         email: userData.email,
         name: userData.name,
         surname: userData.surname,
         role: userData.role as Role,
-        has_temp_password: userData.has_temp_password
-      });
+        has_temp_password: userData.has_temp_password,
+        first_login: userData.first_login,
+        dni: userData.dni,
+        birth_year: userData.birth_year,
+        family_id: userData.family_id
+      };
+
+      setUser(authUser);
 
       console.log('✅ Login exitoso:', userData.email);
-      return { success: true };
+      console.log('¿Es primer login?', userData.first_login);
+      
+      return { 
+        success: true, 
+        user: authUser,
+        isFirstLogin: userData.first_login === true
+      };
     } catch (error: any) {
       console.error('Login error:', error);
       return { success: false, error: error.message || 'Error al iniciar sesión' };
@@ -121,87 +209,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = async () => {
-    console.log('🚪 Iniciando función logout...');
+  const changePassword = async (userId: string, newPassword: string) => {
+    setLoading(true);
     
     try {
-      // Logout simple y directo
-      setUser(null);
-      localStorage.clear();
-      sessionStorage.clear();
+      console.log('Cambiando contraseña para usuario:', userId);
       
-      // Intentar logout de Supabase con timeout
-      try {
-        const promise = supabase.auth.signOut();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout en logout')), 3000)
-        );
-        
-        await Promise.race([promise, timeoutPromise]);
-        console.log('✅ Logout de Supabase Auth exitoso');
-      } catch (authError) {
-        console.error('❌ Error en logout de Supabase Auth:', authError);
-        // Continuar aunque falle el logout de Supabase
+      // Hashear nueva contraseña
+      const passwordHash = await hashPassword(newPassword);
+      
+      // Actualizar usuario
+      const { error } = await supabase
+        .from('users')
+        .update({
+          password_hash: passwordHash,
+          first_login: false,
+          password_changed_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      console.log('✅ Contraseña cambiada correctamente');
+      
+      // Actualizar usuario en el contexto si es el usuario actual
+      if (user && user.id === userId) {
+        setUser({
+          ...user,
+          first_login: false,
+          has_temp_password: false
+        });
       }
       
-      console.log('✅ Logout completado');
       return { success: true };
     } catch (error: any) {
-      console.error('❌ Error general en logout:', error);
-      return { success: false, error: error.message || 'Error al cerrar sesión' };
+      console.error('❌ Error cambiando contraseña:', error);
+      return { success: false, error: error.message || 'Error cambiando contraseña' };
+    } finally {
+      setLoading(false);
     }
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    if (!user) {
-      return { success: false, error: 'No hay sesión activa' };
-    }
-
+  const logout = async () => {
+    console.log('🚪 Iniciando función logout...');
+    setLoading(true);
+    
     try {
-      // Validar nueva contraseña
-      const validation = validatePassword(newPassword);
-      if (!validation.isValid) {
-        return { success: false, error: validation.errors.join('. ') };
-      }
-
-      // Obtener usuario para verificar contraseña actual
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user.id)
-        .single();
-
-      if (error || !userData) {
-        return { success: false, error: 'Error al obtener datos del usuario' };
-      }
-
-      // Verificar contraseña actual
-      const isValidCurrentPassword = currentPassword === userData.password_hash; // Simple comparación
-      
-      if (!isValidCurrentPassword) {
-        return { success: false, error: 'Contraseña actual incorrecta' };
-      }
-
-      // Encriptar nueva contraseña
-      const newPasswordHash = await hashPassword(newPassword);
-
-      // Actualizar contraseña
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          password_hash: newPasswordHash,
-          has_temp_password: false 
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        return { success: false, error: 'Error al actualizar contraseña' };
-      }
-
+      await supabase.auth.signOut();
+      setUser(null);
+      console.log('✅ Sesión cerrada exitosamente');
       return { success: true };
     } catch (error: any) {
-      console.error('Change password error:', error);
-      return { success: false, error: error.message || 'Error al cambiar contraseña' };
+      console.error('❌ Error en logout de Supabase Auth:', error);
+      // Continuar aunque falle el logout de Supabase
+      setUser(null);
+      console.log('✅ Logout completado (forzado)');
+      return { success: true };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -227,23 +292,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('users')
         .update({ 
           password_reset_token: resetToken,
-          password_reset_expires: expiresAt.toISOString() 
+          password_reset_expires: expiresAt.toISOString()
         })
         .eq('id', userData.id);
 
       if (updateError) {
-        return { success: false, error: 'Error al generar token de reset' };
+        return { success: false, error: 'Error generando token de reset' };
       }
 
-      // TODO: Enviar email con el token
+      // TODO: Enviar email con token (implementar servicio de email)
       console.log('Token de reset generado:', resetToken);
-      
-      return { 
-        success: true, 
-        message: 'Se ha enviado un email con instrucciones para resetear tu contraseña' 
-      };
+
+      return { success: true };
     } catch (error: any) {
-      console.error('Reset password error:', error);
       return { success: false, error: error.message || 'Error al resetear contraseña' };
     }
   };
@@ -273,4 +334,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

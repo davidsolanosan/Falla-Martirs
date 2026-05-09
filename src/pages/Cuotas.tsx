@@ -46,13 +46,18 @@ export default function Cuotas() {
         console.log('Búsqueda por nombre Familia:', family);
       }
       
-      // Método 3: por cualquier campo que contenga "CABO RODRIGO"
+      // Método 3: Si es admin y no tiene familia, mostrar todas o permitir seleccionar
       if (!family) {
-        family = families.find((f: any) => 
-          f.name.toLowerCase().includes('cabo') || 
-          f.name.toLowerCase().includes('rodrigo')
-        );
-        console.log('Búsqueda por parcial:', family);
+        if (user.role === 'master_admin' || user.role === 'admin') {
+          console.log('🔍 Usuario admin sin familia - mostrando todas las familias');
+          // Para admin, podemos mostrar la primera familia o un selector
+          family = families[0]; // Mostrar la primera como ejemplo
+          console.log('Admin - usando primera familia:', family);
+        } else {
+          // Para usuarios normales, NO buscar por parcial para evitar mostrar familias incorrectas
+          console.log('❌ Usuario normal sin familia asignada - no se muestra ninguna familia');
+          // family = null; // Mantener null para mostrar mensaje de error
+        }
       }
       
       console.log('Familias disponibles:', families.map(f => ({ id: f.id, name: f.name })));

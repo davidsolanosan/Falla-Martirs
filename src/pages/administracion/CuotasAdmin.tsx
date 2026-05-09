@@ -29,17 +29,8 @@ export default function CuotasAdmin() {
       console.log('Campos de la categoría:', Object.keys(categories[0]));
     }
     
-    // Asignar categorías automáticamente si hay usuarios y categorías
-    console.log('🔍 Verificando asignación automática:');
-    console.log('🔍 Users length:', users.length);
-    console.log('🔍 Categories length:', categories.length);
-    
-    if (users.length > 0 && categories.length > 0) {
-      console.log('🔍 Ejecutando assignCategoriesByAge automáticamente...');
-      assignCategoriesByAge();
-    } else {
-      console.log('🔍 No se ejecuta assignCategoriesByAge - faltan usuarios o categorías');
-    }
+    // No ejecutar assignCategoriesByAge automáticamente para evitar bucle infinito
+    // Se ejecutará manualmente cuando sea necesario
     
     setLoading(false);
   }, [families, users, categories, lotteryDates]);

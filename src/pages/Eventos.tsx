@@ -110,6 +110,7 @@ export default function Eventos() {
         
         // Buscar precio para la categoría específica
         let eventPrice = eventPricesForEvent.find(p => p.category_id === categoryId);
+        let finalCategoryId = categoryId;
         
         if (!eventPrice) {
           console.warn('⚠️ No hay precio para la categoría específica, usando primera disponible');
@@ -121,13 +122,13 @@ export default function Eventos() {
             continue;
           }
           
-          categoryId = defaultCategory;
-          console.log('🔧 Usando categoría por defecto:', categoryId);
+          finalCategoryId = defaultCategory;
+          console.log('🔧 Usando categoría por defecto:', finalCategoryId);
         }
         
         // Calcular el precio según la categoría
         const finalEventPrice = eventPrices.find(p => 
-          p.event_id === event.id && p.category_id === categoryId
+          p.event_id === event.id && p.category_id === finalCategoryId
         );
         
         const calculatedPrice = finalEventPrice?.price || 0;
