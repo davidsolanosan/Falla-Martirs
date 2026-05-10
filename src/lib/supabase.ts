@@ -16,7 +16,8 @@ export interface User {
   dni: string;
   phone: string;
   role: 'user' | 'admin' | 'master_admin';
-  family_id?: string;
+  family_id?: string; // Familia de cuotas (donde paga)
+  event_family_id?: string; // Familia de eventos (donde apunta)
   category_id?: string; // Referencia a la categoría del fallero
   // Campos adicionales del CSV
   codigo_jcf?: string;
@@ -195,7 +196,8 @@ export interface EventRegistration {
   id: string;
   event_id: string;
   user_id: string;
-  family_id: string;
+  family_id: string; // Familia de cuotas (donde se imputa el coste)
+  event_family_id: string; // Familia de eventos (desde donde se apunta)
   category_id: string;
   includes_meal: boolean;
   total_price: number;

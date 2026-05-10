@@ -36,7 +36,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
     poblacion: '',
     codigo_postal: '',
     role: 'user',
-    family_id: ''
+    family_id: '',
+    event_family_id: ''
   });
 
   // Initialize form with user data when editing
@@ -58,7 +59,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
         poblacion: userToEdit.poblacion || '',
         codigo_postal: userToEdit.codigo_postal || '',
         role: userToEdit.role || 'user',
-        family_id: userToEdit.family_id || ''
+        family_id: userToEdit.family_id || '',
+        event_family_id: userToEdit.event_family_id || ''
       });
     } else {
       setFormData({
@@ -77,7 +79,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
         poblacion: '',
         codigo_postal: '',
         role: 'user',
-        family_id: ''
+        family_id: '',
+        event_family_id: ''
       });
     }
   }, [userToEdit, isOpen]);
@@ -162,7 +165,7 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colFamily')}</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('colFamily')} (Cuotas)</label>
               <select
                 value={formData.family_id}
                 onChange={(e) => setFormData({ ...formData, family_id: e.target.value })}
@@ -173,6 +176,42 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
                   <option key={family.id} value={family.id}>{family.name}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Tercera fila: Familia de Eventos */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Familia de Eventos</label>
+              <select
+                value={formData.event_family_id || formData.family_id}
+                onChange={(e) => setFormData({ ...formData, event_family_id: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Misma que cuotas...</option>
+                {families.sort((a, b) => a.name.localeCompare(b.name)).map(family => (
+                  <option key={family.id} value={family.id}>{family.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Familia desde donde puede apuntar a eventos. Por defecto es la misma que la de cuotas.
+              </p>
+            </div>
+            <div className="flex items-end">
+              <div className="text-sm text-slate-600">
+                {formData.event_family_id && formData.event_family_id !== formData.family_id ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="font-medium text-blue-800">⚠️ Configuración Especial</p>
+                    <p className="text-blue-600">Cuotas: {families.find(f => f.id === formData.family_id)?.name}</p>
+                    <p className="text-blue-600">Eventos: {families.find(f => f.id === formData.event_family_id)?.name}</p>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="font-medium text-green-800">✅ Configuración Normal</p>
+                    <p className="text-green-600">Misma familia para cuotas y eventos</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

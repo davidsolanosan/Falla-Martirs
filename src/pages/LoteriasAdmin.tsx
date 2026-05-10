@@ -26,6 +26,17 @@ export default function LoteriasAdmin() {
   const { t } = useTranslation();
   const { lotteryDates, refreshLotteryDates } = useSupabase();
   
+  // Load lottery dates
+  const loadLotteryDates = async () => {
+    try {
+      console.log('🔄 Loading lottery dates...');
+      await refreshLotteryDates();
+      console.log('✅ Lottery dates loaded');
+    } catch (error) {
+      console.error('❌ Error loading lottery dates:', error);
+    }
+  };
+  
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState(t('language'));
   
@@ -141,16 +152,27 @@ export default function LoteriasAdmin() {
     if (!confirm(`¿Estás seguro de eliminar el sorteo "${lottery.name}"?`)) return;
     
     try {
-      const { error } = await supabase
+      console.log('🗑️ Deleting lottery:', { id: lottery.id, name: lottery.name, date: lottery.date });
+      
+      const { error, data } = await supabase
         .from('lottery_dates')
         .delete()
-        .eq('id', lottery.id);
+        .eq('id', lottery.id)
+        .select();
       
-      if (error) throw error;
-      loadLotteryDates();
+      console.log('🗑️ Delete result:', { error, data });
+      
+      if (error) {
+        console.error('❌ Supabase delete error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Lottery deleted successfully, reloading dates...');
+      await loadLotteryDates();
+      console.log('✅ Dates reloaded');
     } catch (error) {
-      console.error('Error deleting lottery:', error);
-      alert('Error al eliminar el sorteo');
+      console.error('❌ Error deleting lottery:', error);
+      alert(`Error al eliminar el sorteo: ${error.message || error}`);
     }
   };
 

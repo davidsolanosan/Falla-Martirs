@@ -140,6 +140,41 @@ export default function Cuotas() {
   const getLotteryDatesByType = (type: string) => {
     return lotteryDates.filter((ld: any) => {
       const date = new Date(ld.date);
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0 = enero, 2 = marzo, 3 = abril
+      const day = date.getDate();
+      
+      // Lógica del año fallero: 1 de abril al 30 de marzo del año siguiente
+      if (selectedYear === 2026) {
+        // Año fallero 2026: 01/04/2026 - 30/03/2027
+        if (year === 2026) {
+          // Del 01/04/2026 al 31/12/2026
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2027) {
+          // Del 01/01/2027 al 30/03/2027
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      } else if (selectedYear === 2025) {
+        // Año fallero 2025: 01/04/2025 - 30/03/2026
+        if (year === 2025) {
+          // Del 01/04/2025 al 31/12/2025
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2026) {
+          // Del 01/01/2026 al 30/03/2026
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      } else if (selectedYear === 2027) {
+        // Año fallero 2027: 01/04/2027 - 30/03/2028
+        if (year === 2027) {
+          // Del 01/04/2027 al 31/12/2027
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2028) {
+          // Del 01/01/2028 al 30/03/2028
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      }
+      
+      // Para otros años, usar año calendario como fallback
       return date.getFullYear() === selectedYear && ld.lottery_type === type;
     });
   };

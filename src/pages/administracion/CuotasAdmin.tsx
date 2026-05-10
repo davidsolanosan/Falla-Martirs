@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
-import { CreditCard, Calculator, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
+import { CreditCard, Calculator, ChevronDown, ChevronUp, Save, X, Search } from 'lucide-react';
 
 export default function CuotasAdmin() {
   const { t } = useTranslation();
@@ -11,6 +11,7 @@ export default function CuotasAdmin() {
   const [selectedFamily, setSelectedFamily] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [expandedFamily, setExpandedFamily] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     // Debug: Ver qué datos tenemos
@@ -34,6 +35,15 @@ export default function CuotasAdmin() {
     
     setLoading(false);
   }, [families, users, categories, lotteryDates]);
+
+  // Filtrar y ordenar familias
+  const filteredAndSortedFamilies = families
+    .filter((family: any) => 
+      family.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a: any, b: any) => 
+      a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
 
   const getFamilyMembers = (familyId: string) => {
     return users.filter((u: any) => u.family_id === familyId);
@@ -174,6 +184,41 @@ export default function CuotasAdmin() {
   const getLotteryDatesByType = (type: string) => {
     return lotteryDates.filter((ld: any) => {
       const date = new Date(ld.date);
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0 = enero, 2 = marzo, 3 = abril
+      const day = date.getDate();
+      
+      // Lógica del año fallero: 1 de abril al 30 de marzo del año siguiente
+      if (selectedYear === 2026) {
+        // Año fallero 2026: 01/04/2026 - 30/03/2027
+        if (year === 2026) {
+          // Del 01/04/2026 al 31/12/2026
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2027) {
+          // Del 01/01/2027 al 30/03/2027
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      } else if (selectedYear === 2025) {
+        // Año fallero 2025: 01/04/2025 - 30/03/2026
+        if (year === 2025) {
+          // Del 01/04/2025 al 31/12/2025
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2026) {
+          // Del 01/01/2026 al 30/03/2026
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      } else if (selectedYear === 2027) {
+        // Año fallero 2027: 01/04/2027 - 30/03/2028
+        if (year === 2027) {
+          // Del 01/04/2027 al 31/12/2027
+          return (month > 3 || (month === 3 && day >= 1)) && ld.lottery_type === type;
+        } else if (year === 2028) {
+          // Del 01/01/2028 al 30/03/2028
+          return (month < 3 || (month === 2 && day <= 30)) && ld.lottery_type === type;
+        }
+      }
+      
+      // Para otros años, usar año calendario como fallback
       return date.getFullYear() === selectedYear && ld.lottery_type === type;
     });
   };
@@ -196,25 +241,25 @@ export default function CuotasAdmin() {
     // Calcular beneficio total por tipo
     let totalBenefit = 0;
     
-    // Beneficio ordinarios (49 sorteos)
+    // Beneficio ordinarios ({ordinaryLotteries.length} sorteos)
     ordinaryLotteries.forEach((ld: any) => {
       const benefit = ld.ordinary_benefit || 0;
       totalBenefit += benefit * ordinaryTickets;
     });
     
-    // Beneficio Navidad (1 sorteo)
+    // Beneficio Navidad ({christmasLotteries.length} sorteos)
     christmasLotteries.forEach((ld: any) => {
       const benefit = ld.christmas_benefit || 0;
       totalBenefit += benefit * christmasTickets;
     });
     
-    // Beneficio Niño (1 sorteo)
+    // Beneficio Niño ({childLotteries.length} sorteos)
     childLotteries.forEach((ld: any) => {
       const benefit = ld.child_benefit || 0;
       totalBenefit += benefit * childTickets;
     });
     
-    // Beneficio Horta Nord (1 sorteo)
+    // Beneficio Horta Nord ({hortaLotteries.length} sorteos)
     hortaLotteries.forEach((ld: any) => {
       const benefit = ld.horta_benefit || 0;
       totalBenefit += benefit * hortaTickets;
@@ -299,34 +344,55 @@ export default function CuotasAdmin() {
           </div>
         </div>
 
-        {/* Year Selector */}
+        {/* Year and Search Controls */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
-          <div className="flex items-center space-x-4">
-            <label className="text-sm font-medium text-slate-700">Año:</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-2 border border-slate-200 rounded-lg"
-            >
-              {[2024, 2025, 2026].map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Year Selector */}
+            <div className="flex items-center space-x-4">
+              <label className="text-sm font-medium text-slate-700">Año:</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                className="px-3 py-2 border border-slate-200 rounded-lg"
+              >
+                {[2024, 2025, 2026].map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Search Filter */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Buscar familia..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
           </div>
         </div>
 
         {/* Families List */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="p-6 border-b border-slate-100">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-xl font-bold text-slate-800">Familias</h3>
+            <span className="text-sm text-slate-500">
+              {filteredAndSortedFamilies.length} de {families.length} familias
+            </span>
           </div>
           <div className="divide-y divide-slate-100">
-            {families.map((family: any) => {
-              const quota = calculateMonthlyQuota(family);
-              const isExpanded = expandedFamily === family.id;
+            {filteredAndSortedFamilies.length > 0 ? (
+              filteredAndSortedFamilies.map((family: any) => {
+                const quota = calculateMonthlyQuota(family);
+                const isExpanded = expandedFamily === family.id;
 
-              return (
-                <div key={family.id}>
+                return (
+                  <div key={family.id}>
                   <div 
                     className="p-4 sm:p-6 hover:bg-slate-50 transition-colors cursor-pointer"
                     onClick={() => setExpandedFamily(isExpanded ? null : family.id)}
@@ -392,7 +458,25 @@ export default function CuotasAdmin() {
                   </div>
                 </div>
               );
-            })}
+              })
+            ) : (
+              <div className="p-8 text-center">
+                <div className="text-slate-400 mb-2">
+                  <Search className="w-12 h-12 mx-auto" />
+                </div>
+                <p className="text-slate-500 text-lg">
+                  {searchTerm ? 'No se encontraron familias con ese nombre' : 'No hay familias disponibles'}
+                </p>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Limpiar búsqueda
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -493,7 +577,7 @@ export default function CuotasAdmin() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Sorteos Ordinarios (49)
+                        Sorteos Ordinarios ({getLotteryDatesByType('ordinary').length})
                       </label>
                       <input
                         type="number"
