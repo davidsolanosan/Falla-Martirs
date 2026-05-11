@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { useSupabase } from '../lib/SupabaseContext';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../lib/i18n';
-import { CalendarDays, MapPin, Clock, X, Users, Info } from 'lucide-react';
+import { useSupabase } from '../lib/SupabaseContext';
 import { format } from 'date-fns';
 import { es, ca } from 'date-fns/locale';
+import { CalendarDays, Users, Info, MapPin, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Eventos() {
   const { user } = useAuth();
   const { t, language } = useTranslation();
+  const navigate = useNavigate();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
@@ -47,11 +49,24 @@ export default function Eventos() {
 
   // Función para abrir noticia del evento
   const openEventNews = (event) => {
+    console.log('🔍 openEventNews llamado para evento:', event);
+    
     if (event.news_id) {
-      // Abrir la noticia en una nueva pestaña
-      const newsUrl = `/noticias#news-${event.news_id}`;
-      window.open(newsUrl, '_blank');
+      console.log('🔍 news_id encontrado:', event.news_id);
+      
+      try {
+        // Abrir la noticia usando React Router navigate
+        const newsUrl = `/noticias#news-${event.news_id}`;
+        console.log('🔍 URL a abrir:', newsUrl);
+        
+        // Usar React Router para navegación interna
+        navigate(newsUrl);
+      } catch (error) {
+        console.error('🔍 Error abriendo noticia:', error);
+        alert('Error al abrir la noticia. Por favor, inténtalo de nuevo.');
+      }
     } else {
+      console.log('🔍 No hay news_id para el evento');
       // Mostrar mensaje si no hay noticia
       alert('Este evento aún no tiene una noticia asociada.');
     }
@@ -653,6 +668,7 @@ export default function Eventos() {
                       onClick={() => openEventNews(event)}
                       className="text-sm font-medium px-3 py-1 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors flex items-center"
                       title="Ver información completa"
+                      type="button"
                     >
                       <Info className="w-4 h-4 mr-1" />
                       + info
