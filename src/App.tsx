@@ -30,6 +30,7 @@ import LoteriasAdmin from './pages/LoteriasAdmin';
 import DocumentosAdmin from './pages/administracion/DocumentosAdmin';
 import CrearAdmin from './pages/administracion/CrearAdmin';
 import ConfiguracionAdmin from './pages/administracion/ConfiguracionAdmin';
+import ActualizarNoticiasEventos from './pages/administracion/ActualizarNoticiasEventos';
 import ChangePassword from './pages/ChangePassword';
 import ResetPassword from './pages/ResetPassword';
 
@@ -210,6 +211,14 @@ function AppWithAuth() {
                 <ProtectedRoute>
                   <Layout>
                     <ConfiguracionAdmin />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/administracion/actualizar-noticias" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <ActualizarNoticiasEventos />
                   </Layout>
                 </ProtectedRoute>
               } />

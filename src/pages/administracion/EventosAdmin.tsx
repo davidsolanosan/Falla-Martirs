@@ -72,39 +72,43 @@ export default function EventosAdmin() {
       const newsContent = `
         <h2>📅 ${event.title}</h2>
         
-        <h3>📋 Detalles del Evento:</h3>
-        <p><strong>Fecha:</strong> ${event.event_date}</p>
-        <p><strong>Hora:</strong> ${event.time || 'Por determinar'}</p>
-        <p><strong>Lugar:</strong> ${event.site || 'Por determinar'}</p>
-        <p><strong>Precio:</strong> Ver precios por categoría</p>
-        <p><strong>Incluye comida:</strong> ${event.includes_meal ? 'Sí' : 'No'}</p>
+        <h3>📋 Detalls de l'Esdeveniment:</h3>
+        <p><strong>Data:</strong> ${event.event_date}</p>
+        <p><strong>Hora:</strong> ${event.time || 'Per determinar'}</p>
+        <p><strong>Lloc:</strong> ${event.site || 'Per determinar'}</p>
+        <p><strong>Preu:</strong> Veure preus per categoria</p>
+        <p><strong>Inclou menjar:</strong> ${event.includes_meal ? 'Sí' : 'No'}</p>
         
-        <h3>📝 Descripción:</h3>
-        <div>${event.description || 'Sin descripción adicional'}</div>
+        <br><br>
         
-        <h3>📅 Información de Inscripción:</h3>
-        <p><strong>Fecha límite:</strong> ${event.registration_deadline}</p>
-        <p><strong>Estado:</strong> ${event.is_active ? 'Activo' : 'Inactivo'}</p>
+        <h3>📝 Descripció:</h3>
+        <div>${event.description || 'Sense descripció addicional'}</div>
         
-        <hr style="margin: 20px 0;">
-        <p><em>Esta noticia se generó automáticamente para el evento "${event.title}".</em></p>
-        <p><em>Para más información o inscribirte, visita la sección de Eventos.</em></p>
+        <br><br>
+        
+        <h3>📅 Informació d'Inscripció:</h3>
+        <p><strong>Data límit:</strong> ${event.registration_deadline}</p>
+        <p><strong>Estat:</strong> ${event.is_active ? 'Actiu' : 'Inactiu'}</p>
+        
+        <br><br>
+        
+        <p><em>Per inscriure-te, visita la secció d'Events.</em></p>
       `;
 
       const newsData = {
-        title: `📅 ${event.title} - Información Completa`,
+        title: `📅 ${event.title} - Informació Completa`,
         content: newsContent,
         image_url: event.image_url,
-        author: 'Sistema Automático',
+        author: 'Falla Màrtirs',
         status: 'published' as const
       };
 
       let newsId = event.news_id;
       
       if (event.news_id) {
-        // Actualizar noticia existente
+        // Actualizar noticia existente con el nuevo formato
         await updateNews(event.news_id, newsData);
-        console.log('✅ Noticia actualizada:', event.news_id);
+        console.log('✅ Noticia actualizada con nuevo formato:', event.news_id);
       } else {
         // Crear nueva noticia
         const newNews = await createNews(newsData);
