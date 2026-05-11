@@ -203,9 +203,60 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const updateFamily = async (id: string, family: Partial<Family>) => {
     try {
       console.log('🗄️ updateFamily called with:', { id, family });
+      
+      // Primero verificar qué campos existen realmente en la BD
+      const { data: existingFamily } = await supabase
+        .from('families')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (!existingFamily) {
+        throw new Error('Familia no encontrada');
+      }
+      
+      console.log('🗄️ Existing family data:', existingFamily);
+      
+      // Solo incluir campos que existen en la BD actual
+      const updateData: any = {};
+      
+      // Campos básicos que siempre deberían existir
+      if (family.name !== undefined) updateData.name = family.name;
+      if (family.address !== undefined) updateData.address = family.address;
+      if (family.phone !== undefined) updateData.phone = family.phone;
+      if (family.representative_id !== undefined) updateData.representative_id = family.representative_id;
+      
+      // Campos de papeletas - solo si existen en la BD
+      if ('ticket_start' in existingFamily && family.ticket_start !== undefined) {
+        updateData.ticket_start = family.ticket_start;
+      }
+      if ('ticket_end' in existingFamily && family.ticket_end !== undefined) {
+        updateData.ticket_end = family.ticket_end;
+      }
+      if ('ordinary_tickets' in existingFamily && family.ordinary_tickets !== undefined) {
+        updateData.ordinary_tickets = family.ordinary_tickets;
+      }
+      if ('christmas_tickets' in existingFamily && family.christmas_tickets !== undefined) {
+        updateData.christmas_tickets = family.christmas_tickets;
+      }
+      if ('child_tickets' in existingFamily && family.child_tickets !== undefined) {
+        updateData.child_tickets = family.child_tickets;
+      }
+      if ('horta_tickets' in existingFamily && family.horta_tickets !== undefined) {
+        updateData.horta_tickets = family.horta_tickets;
+      }
+      
+      console.log('🗄️ updateData filtered:', updateData);
+      
+      // Si no hay nada que actualizar, retornar la familia existente
+      if (Object.keys(updateData).length === 0) {
+        console.log('🗄️ No fields to update, returning existing family');
+        return existingFamily;
+      }
+      
       const { data, error } = await supabase
         .from('families')
-        .update(family)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();

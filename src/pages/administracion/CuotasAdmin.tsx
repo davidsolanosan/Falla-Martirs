@@ -292,14 +292,21 @@ export default function CuotasAdmin() {
     if (!selectedFamily) return;
     
     try {
-      await updateFamily(selectedFamily.id, {
+      // Si hay papeleta inicial y final, calcular ordinary_tickets automáticamente
+      const updateData: any = {
         ticket_start: selectedFamily.ticket_start,
         ticket_end: selectedFamily.ticket_end,
-        ordinary_tickets: selectedFamily.ordinary_tickets,
         christmas_tickets: selectedFamily.christmas_tickets,
         child_tickets: selectedFamily.child_tickets,
         horta_tickets: selectedFamily.horta_tickets
-      });
+      };
+      
+      // Solo incluir ordinary_tickets si no se puede calcular automáticamente
+      if (!selectedFamily.ticket_start || !selectedFamily.ticket_end) {
+        updateData.ordinary_tickets = selectedFamily.ordinary_tickets;
+      }
+      
+      await updateFamily(selectedFamily.id, updateData);
       setShowModal(false);
       alert('Familia actualizada correctamente');
     } catch (error) {
@@ -579,16 +586,32 @@ export default function CuotasAdmin() {
                       <label className="block text-sm font-medium text-slate-700 mb-1">
                         Sorteos Ordinarios ({getLotteryDatesByType('ordinary').length})
                       </label>
-                      <input
-                        type="number"
-                        value={selectedFamily.ordinary_tickets || ''}
-                        onChange={(e) => setSelectedFamily({
-                          ...selectedFamily,
-                          ordinary_tickets: parseInt(e.target.value) || 0
-                        })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg"
-                        placeholder="0"
-                      />
+                      {selectedFamily.ticket_start && selectedFamily.ticket_end ? (
+                        <input
+                          type="text"
+                          value={(selectedFamily.ticket_end || 0) - (selectedFamily.ticket_start || 0) + 1}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50"
+                          readOnly
+                          title="Calculado automáticamente: Papeleta final - Papeleta inicial + 1"
+                        />
+                      ) : (
+                        <input
+                          type="number"
+                          value={selectedFamily.ordinary_tickets || ''}
+                          onChange={(e) => setSelectedFamily({
+                            ...selectedFamily,
+                            ordinary_tickets: parseInt(e.target.value) || 0
+                          })}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                          placeholder="0"
+                          title="Introduce manualmente si no conoces las papeletas inicial y final"
+                        />
+                      )}
+                      <p className="text-xs text-slate-500 mt-1">
+                        {selectedFamily.ticket_start && selectedFamily.ticket_end 
+                          ? "Calculado automáticamente" 
+                          : "Introduce manualmente o define papeletas inicial/final"}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
