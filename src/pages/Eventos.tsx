@@ -622,7 +622,10 @@ export default function Eventos() {
                     {getEventRegistrations(event.id).length} apuntados
                   </div>
                 </div>
-                <p className="text-slate-500 text-sm mb-4 line-clamp-2">{event.description}</p>
+                <div 
+                  className="text-slate-500 text-sm mb-4 line-clamp-2 [&_b]:font-bold [&_strong]:font-bold [&_i]:italic [&_em]:italic [&_u]:underline [&_div]:my-1 [&_br]:hidden max-w-none"
+                  dangerouslySetInnerHTML={{ __html: event.description || '' }}
+                />
                 
                 {event.image_url && (
                   <div className="mb-4">
