@@ -15,6 +15,25 @@ export default function Noticias() {
   // Cargar noticias de Supabase
   useEffect(() => {
     loadNewsAndReadStatus();
+    
+    // Verificar si hay un hash en la URL para scroll a noticia específica
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#news-')) {
+      const newsId = hash.replace('#news-', '');
+      setTimeout(() => {
+        const element = document.getElementById(`news-${newsId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Resaltar temporalmente la noticia
+          element.style.border = '2px solid rgb(59, 130, 246)';
+          element.style.boxShadow = '0 0 0 10px rgba(59, 130, 246, 0.3)';
+          setTimeout(() => {
+            element.style.border = '';
+            element.style.boxShadow = '';
+          }, 3000);
+        }
+      }, 1000);
+    }
   }, [user]);
 
   const loadNewsAndReadStatus = async () => {
@@ -106,7 +125,7 @@ export default function Noticias() {
   const readNewsList = news.filter(n => n.status === 'published' && readNews.includes(n.id));
 
   const NewsCard = ({ newsItem, isRead = false }: { newsItem: News; isRead?: boolean }) => (
-    <div className={`bg-white rounded-2xl shadow-sm border ${isRead ? 'border-slate-200 opacity-75' : 'border-slate-100'} overflow-hidden transition-all duration-300`}>
+    <div id={`news-${newsItem.id}`} className={`bg-white rounded-2xl shadow-sm border ${isRead ? 'border-slate-200 opacity-75' : 'border-slate-100'} overflow-hidden transition-all duration-300`}>
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">

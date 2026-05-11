@@ -3,6 +3,7 @@ import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { Calendar, Plus, Edit2, Trash2, Users, Eye, Euro, Clock, AlertCircle, CheckCircle, Download, Utensils } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import TextEditor from '../../components/editor/TextEditor';
 // Función para verificar si el plazo de inscripción ha finalizado
 const isRegistrationDeadlinePassed = (event) => {
   if (!event.registration_deadline) return false;
@@ -18,7 +19,7 @@ const isRegistrationDeadlinePassed = (event) => {
 
 export default function EventosAdmin() {
   const { t } = useTranslation();
-  const { events, eventPrices, eventRegistrations, families, users, categories, createEvent, updateEvent, deleteEvent, createEventPrice, updateEventPrice, deleteEventPrice, createEventRegistration, updateEventRegistration, deleteEventRegistration } = useSupabase();
+  const { events, eventPrices, eventRegistrations, families, users, categories, createEvent, updateEvent, deleteEvent, createEventPrice, updateEventPrice, deleteEventPrice, createEventRegistration, updateEventRegistration, deleteEventRegistration, createNews, updateNews } = useSupabase();
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
@@ -34,7 +35,8 @@ export default function EventosAdmin() {
     meal_type: '', // Tipo de comida (ej: bocadillo de longanizas con tomate)
     meal_cost: '', // Coste adicional por persona
     site: '',
-    time: ''
+    time: '',
+    news_id: '' // Relación con noticia generada
   });
   const [priceForm, setPriceForm] = useState<{ [key: string]: number }>({});
 
@@ -51,8 +53,7 @@ export default function EventosAdmin() {
   };
 
   const getCategoryName = (categoryId: string) => {
-    const category = categories.find((c: any) => c.id === categoryId);
-    return category?.name || 'Sin categoría';
+    return categories.find((c: any) => c.id === categoryId)?.name || '';
   };
 
   const getUserName = (userId: string) => {
@@ -65,14 +66,89 @@ export default function EventosAdmin() {
     return family?.name || 'Familia desconocida';
   };
 
+  // Función para generar noticia automáticamente
+  const generateEventNews = async (event: any) => {
+    try {
+      const newsContent = `
+        <h2>📅 ${event.title}</h2>
+        
+        <h3>📋 Detalles del Evento:</h3>
+        <p><strong>Fecha:</strong> ${event.event_date}</p>
+        <p><strong>Hora:</strong> ${event.time || 'Por determinar'}</p>
+        <p><strong>Lugar:</strong> ${event.site || 'Por determinar'}</p>
+        <p><strong>Precio:</strong> Ver precios por categoría</p>
+        <p><strong>Incluye comida:</strong> ${event.includes_meal ? 'Sí' : 'No'}</p>
+        
+        <h3>📝 Descripción:</h3>
+        <div>${event.description || 'Sin descripción adicional'}</div>
+        
+        <h3>📅 Información de Inscripción:</h3>
+        <p><strong>Fecha límite:</strong> ${event.registration_deadline}</p>
+        <p><strong>Estado:</strong> ${event.is_active ? 'Activo' : 'Inactivo'}</p>
+        
+        <hr style="margin: 20px 0;">
+        <p><em>Esta noticia se generó automáticamente para el evento "${event.title}".</em></p>
+        <p><em>Para más información o inscribirte, visita la sección de Eventos.</em></p>
+      `;
+
+      const newsData = {
+        title: `📅 ${event.title} - Información Completa`,
+        content: newsContent,
+        image_url: event.image_url,
+        author: 'Sistema Automático',
+        status: 'published' as const
+      };
+
+      let newsId = event.news_id;
+      
+      if (event.news_id) {
+        // Actualizar noticia existente
+        await updateNews(event.news_id, newsData);
+        console.log('✅ Noticia actualizada:', event.news_id);
+      } else {
+        // Crear nueva noticia
+        const newNews = await createNews(newsData);
+        newsId = newNews.id;
+        console.log('✅ Noticia creada:', newsId);
+        
+        // Actualizar evento con el ID de la noticia
+        await updateEvent(event.id, { news_id: newsId });
+        console.log('✅ Evento actualizado con news_id:', newsId);
+      }
+
+      return newsId;
+    } catch (error) {
+      console.error('❌ Error generando noticia:', error);
+      throw error;
+    }
+  };
+
   const handleSaveEvent = async () => {
     try {
       console.log('🔍 handleSaveEvent iniciando...');
+      
+      // Validar campos requeridos
+      if (!formData.title.trim()) {
+        alert('El título del evento es obligatorio');
+        return;
+      }
+      
+      if (!formData.event_date) {
+        alert('La fecha del evento es obligatoria');
+        return;
+      }
+      
+      if (!formData.registration_deadline) {
+        alert('La fecha límite de inscripción es obligatoria');
+        return;
+      }
     
-    // Convertir meal_cost a null si está vacío para evitar error de tipo numérico
+    // Convertir campos vacíos a null para evitar errores de tipo
     const processedFormData = {
       ...formData,
-      meal_cost: formData.meal_cost === '' ? null : parseFloat(formData.meal_cost) || 0
+      meal_cost: formData.meal_cost === '' ? null : parseFloat(formData.meal_cost) || 0,
+      event_date: formData.event_date === '' ? null : formData.event_date,
+      registration_deadline: formData.registration_deadline === '' ? null : formData.registration_deadline
     };
     
     console.log('🔍 formData procesado:', processedFormData);
@@ -137,6 +213,19 @@ export default function EventosAdmin() {
         }
       }
       
+      // Generar o actualizar noticia automáticamente
+      try {
+        const eventData = {
+          ...processedFormData,
+          id: savedEventId
+        };
+        await generateEventNews(eventData);
+        console.log('✅ Noticia generada/actualizada automáticamente');
+      } catch (newsError) {
+        console.warn('⚠️ No se pudo generar la noticia automáticamente:', newsError);
+        // No bloquear la creación del evento si falla la noticia
+      }
+      
       console.log('🔍 Cerrando modal...');
       handleCloseModal();
       console.log('✅ handleSaveEvent completado exitosamente');
@@ -158,7 +247,8 @@ export default function EventosAdmin() {
       meal_type: event.meal_type || '',
       meal_cost: event.meal_cost || '',
       site: event.site || '',
-      time: event.time || ''
+      time: event.time || '',
+      news_id: event.news_id || ''
     });
     
     // Cargar precios existentes
@@ -196,7 +286,8 @@ export default function EventosAdmin() {
       meal_type: '',
       meal_cost: '',
       site: '',
-      time: ''
+      time: '',
+      news_id: ''
     });
     setPriceForm({});
   };
@@ -513,7 +604,7 @@ export default function EventosAdmin() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {t('eventTitle')}
+                    {t('eventTitle')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -521,6 +612,7 @@ export default function EventosAdmin() {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
                     placeholder={t('eventTitlePlaceholder')}
+                    required
                   />
                 </div>
                 <div>
@@ -539,38 +631,41 @@ export default function EventosAdmin() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  {t('eventDescription')}
+                  {t('eventDescription')} (Editor enriquecido - 600 caracteres)
                 </label>
-                <textarea
+                <TextEditor
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
-                  placeholder={t('eventDescriptionPlaceholder')}
+                  onChange={(value) => setFormData({ ...formData, description: value })}
+                  placeholder="Descripción detallada del evento con formato (negritas, colores, etc.)..."
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Usa el editor para dar formato al texto. La descripción se usará para generar automáticamente una noticia del evento.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {t('eventDate')}
+                    {t('eventDate')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={formData.event_date}
                     onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {t('registrationDeadline')}
+                    {t('registrationDeadline')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={formData.registration_deadline}
                     onChange={(e) => setFormData({ ...formData, registration_deadline: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    required
                   />
                 </div>
 

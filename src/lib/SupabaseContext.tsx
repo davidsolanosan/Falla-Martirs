@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -15,6 +15,7 @@ interface SupabaseContextType {
   events: Event[];
   eventPrices: EventPrice[];
   eventRegistrations: EventRegistration[];
+  news: News[];
   familyRepresentatives: {family_id: string, user_id: string}[];
   loading: boolean;
   error: string | null;
@@ -61,6 +62,11 @@ interface SupabaseContextType {
   createEventRegistration: (registration: Omit<EventRegistration, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateEventRegistration: (id: string, registration: Partial<EventRegistration>) => Promise<void>;
   deleteEventRegistration: (id: string) => Promise<void>;
+  
+  // News CRUD functions
+  createNews: (news: Omit<News, 'id' | 'created_at' | 'updated_at'>) => Promise<News>;
+  updateNews: (id: string, news: Partial<News>) => Promise<News>;
+  deleteNews: (id: string) => Promise<void>;
   setRepresentatives: (familyId: string, userIds: string[]) => Promise<void>;
   
   // Refresh functions
@@ -75,6 +81,7 @@ interface SupabaseContextType {
   refreshEvents: () => Promise<void>;
   refreshEventPrices: () => Promise<void>;
   refreshEventRegistrations: () => Promise<void>;
+  refreshNews: () => Promise<void>;
   refreshFamilyRepresentatives: () => Promise<void>;
   
   // Funciones de autenticación
@@ -98,6 +105,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<Event[]>([]);
   const [eventPrices, setEventPrices] = useState<EventPrice[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
+  const [news, setNews] = useState<News[]>([]);
   const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
   
   // Banderas para evitar cargas múltiples
@@ -811,6 +819,28 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshNews = async () => {
+    try {
+      console.log('Loading news...');
+      const { data, error } = await supabase
+        .from('news')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading news:', error);
+        setNews([]);
+        throw error;
+      }
+      console.log('News loaded:', data);
+      setNews(data || []);
+    } catch (err) {
+      console.error('Exception loading news:', err);
+      setNews([]);
+      throw err;
+    }
+  };
+
   const refreshFamilyRepresentatives = async () => {
     try {
       console.log('Loading family representatives...');
@@ -970,6 +1000,60 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       await refreshEventRegistrations();
     } catch (err) {
       console.error('Error deleting event registration:', err);
+      throw err;
+    }
+  };
+
+  // News CRUD functions
+  const createNews = async (news: Omit<News, 'id' | 'created_at' | 'updated_at'>): Promise<News> => {
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .insert([news])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      await refreshNews();
+      return data;
+    } catch (err) {
+      console.error('Error creating news:', err);
+      throw err;
+    }
+  };
+
+  const updateNews = async (id: string, news: Partial<News>): Promise<News> => {
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .update(news)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      await refreshNews();
+      return data;
+    } catch (err) {
+      console.error('Error updating news:', err);
+      throw err;
+    }
+  };
+
+  const deleteNews = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('news')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      await refreshNews();
+    } catch (err) {
+      console.error('Error deleting news:', err);
       throw err;
     }
   };
@@ -1239,6 +1323,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshEvents(), // AÑADIDO: cargar eventos
           refreshEventPrices(), // AÑADIDO: cargar precios de eventos
           refreshEventRegistrations(), // AÑADIDO: cargar inscripciones de eventos
+          refreshNews(), // AÑADIDO: cargar noticias
           refreshFamilyRepresentatives(), // AÑADIDO: cargar representantes de familias
         ]);
         
@@ -1311,6 +1396,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     events,
     eventPrices,
     eventRegistrations,
+    news,
     familyRepresentatives,
     loading,
     error,
@@ -1351,6 +1437,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     createEventRegistration,
     updateEventRegistration,
     deleteEventRegistration,
+    createNews,
+    updateNews,
+    deleteNews,
     setRepresentatives,
     refreshFamilies,
     refreshUsers,
@@ -1363,6 +1452,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshEvents,
     refreshEventPrices,
     refreshEventRegistrations,
+    refreshNews,
     refreshFamilyRepresentatives,
     // Funciones de autenticación
     loginUser,

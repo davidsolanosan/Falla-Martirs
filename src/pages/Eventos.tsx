@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../lib/i18n';
-import { CalendarDays, MapPin, Clock, X, Users } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, X, Users, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { es, ca } from 'date-fns/locale';
 
@@ -12,6 +12,10 @@ export default function Eventos() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
+
+  const getEventRegistrations = (eventId: string) => {
+    return eventRegistrations.filter((er: any) => er.event_id === eventId);
+  };
   
   const dateLocale = language === 'va' ? ca : es;
 
@@ -39,6 +43,18 @@ export default function Eventos() {
     console.log('🔍 Abriendo modal de inscripción para evento:', event);
     setSelectedEvent(event);
     setIsRegistrationModalOpen(true);
+  };
+
+  // Función para abrir noticia del evento
+  const openEventNews = (event) => {
+    if (event.news_id) {
+      // Abrir la noticia en una nueva pestaña
+      const newsUrl = `/noticias#news-${event.news_id}`;
+      window.open(newsUrl, '_blank');
+    } else {
+      // Mostrar mensaje si no hay noticia
+      alert('Este evento aún no tiene una noticia asociada.');
+    }
   };
 
   // Función para eliminar inscripción
@@ -556,7 +572,7 @@ export default function Eventos() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map(event => {
           const date = new Date(event.event_date);
           return (
@@ -584,7 +600,13 @@ export default function Eventos() {
                   </span>
                 </div>
                 
-                <h3 className="text-xl font-bold text-slate-800 mb-2">{event.title}</h3>
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 gap-2">
+                  <h3 className="text-xl font-bold text-slate-800 flex-1">{event.title}</h3>
+                  <div className="flex items-center text-sm text-slate-600 whitespace-nowrap">
+                    <Users className="w-4 h-4 mr-1" />
+                    {getEventRegistrations(event.id).length} apuntados
+                  </div>
+                </div>
                 <p className="text-slate-500 text-sm mb-4 line-clamp-2">{event.description}</p>
                 
                 {event.image_url && (
@@ -618,8 +640,8 @@ export default function Eventos() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                  <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-slate-100 gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       event.is_active 
                         ? 'bg-green-100 text-green-800' 
@@ -627,12 +649,20 @@ export default function Eventos() {
                     }`}>
                       {event.is_active ? t('active') : t('inactive')}
                     </span>
+                    <button 
+                      onClick={() => openEventNews(event)}
+                      className="text-sm font-medium px-3 py-1 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors flex items-center"
+                      title="Ver información completa"
+                    >
+                      <Info className="w-4 h-4 mr-1" />
+                      + info
+                    </button>
                   </div>
                   {user ? (
                     <button 
                       onClick={() => openRegistrationModal(event)}
                       disabled={isRegistrationDeadlinePassed(event)}
-                      className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${
+                      className={`text-sm font-medium px-4 py-2 rounded-xl transition-all w-full sm:w-auto ${
                         isRegistrationDeadlinePassed(event)
                           ? 'text-slate-400 bg-slate-100 cursor-not-allowed opacity-50'
                           : 'text-white bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]'
@@ -641,8 +671,8 @@ export default function Eventos() {
                       {isRegistrationDeadlinePassed(event) ? t('registrationClosed') : t('join')}
                     </button>
                   ) : (
-                    <div className="relative group">
-                      <button disabled className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] px-4 py-2 rounded-xl cursor-not-allowed opacity-75">
+                    <div className="relative group w-full sm:w-auto">
+                      <button disabled className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] px-4 py-2 rounded-xl cursor-not-allowed opacity-75 w-full sm:w-auto">
                         {t('join')}
                       </button>
                       <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-[rgb(48,80,105)] text-white text-xs rounded-xl text-center z-10 shadow-lg hidden group-hover:block">

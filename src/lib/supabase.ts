@@ -179,6 +179,7 @@ export interface Event {
   includes_meal: boolean;
   site?: string;
   time?: string;
+  news_id?: string; // Relación con noticia generada automáticamente
   created_at: string;
   updated_at: string;
 }
