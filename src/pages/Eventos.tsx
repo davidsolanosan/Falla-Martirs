@@ -3,7 +3,7 @@ import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { format } from 'date-fns';
 import { es, ca } from 'date-fns/locale';
-import { CalendarDays, Users, Info, MapPin, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { CalendarDays, Users, Info, MapPin, ChevronDown, ChevronUp, Clock, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
