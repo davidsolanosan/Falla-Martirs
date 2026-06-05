@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionArticle, Petition, PetitionPayment } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -16,6 +16,9 @@ interface SupabaseContextType {
   eventPrices: EventPrice[];
   eventRegistrations: EventRegistration[];
   news: News[];
+  petitionArticles: PetitionArticle[];
+  petitions: Petition[];
+  petitionPayments: PetitionPayment[];
   familyRepresentatives: {family_id: string, user_id: string}[];
   loading: boolean;
   error: string | null;
@@ -69,6 +72,15 @@ interface SupabaseContextType {
   deleteNews: (id: string) => Promise<void>;
   setRepresentatives: (familyId: string, userIds: string[]) => Promise<void>;
   
+  // Petitions CRUD functions
+  createPetitionArticle: (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => Promise<PetitionArticle>;
+  updatePetitionArticle: (id: string, article: Partial<PetitionArticle>) => Promise<PetitionArticle>;
+  deletePetitionArticle: (id: string) => Promise<void>;
+  createPetition: (petition: Omit<Petition, 'id' | 'created_at' | 'updated_at'>) => Promise<Petition>;
+  updatePetition: (id: string, petition: Partial<Petition>) => Promise<Petition>;
+  deletePetition: (id: string) => Promise<void>;
+  createPetitionPayment: (payment: Omit<PetitionPayment, 'id' | 'created_at'>) => Promise<PetitionPayment>;
+  
   // Refresh functions
   refreshFamilies: () => Promise<void>;
   refreshUsers: () => Promise<void>;
@@ -82,6 +94,9 @@ interface SupabaseContextType {
   refreshEventPrices: () => Promise<void>;
   refreshEventRegistrations: () => Promise<void>;
   refreshNews: () => Promise<void>;
+  refreshPetitionArticles: () => Promise<void>;
+  refreshPetitions: () => Promise<void>;
+  refreshPetitionPayments: () => Promise<void>;
   refreshFamilyRepresentatives: () => Promise<void>;
   
   // Funciones de autenticación
@@ -106,6 +121,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [eventPrices, setEventPrices] = useState<EventPrice[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [news, setNews] = useState<News[]>([]);
+  const [petitionArticles, setPetitionArticles] = useState<PetitionArticle[]>([]);
+  const [petitions, setPetitions] = useState<Petition[]>([]);
+  const [petitionPayments, setPetitionPayments] = useState<PetitionPayment[]>([]);
   const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
   
   // Banderas para evitar cargas múltiples
@@ -1346,6 +1364,178 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Petitions CRUD functions
+  const createPetitionArticle = async (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_articles')
+        .insert([article])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitionArticles();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear artículo');
+      throw err;
+    }
+  };
+
+  const updatePetitionArticle = async (id: string, article: Partial<PetitionArticle>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_articles')
+        .update(article)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitionArticles();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar artículo');
+      throw err;
+    }
+  };
+
+  const deletePetitionArticle = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('petition_articles')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshPetitionArticles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar artículo');
+      throw err;
+    }
+  };
+
+  const createPetition = async (petition: Omit<Petition, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petitions')
+        .insert([petition])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Crear pago extra automáticamente
+      await createPetitionPayment({
+        petition_id: data.id,
+        amount: petition.total_amount,
+        payment_month: new Date().toISOString().slice(0, 7) // YYYY-MM
+      });
+      
+      await refreshPetitions();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear petición');
+      throw err;
+    }
+  };
+
+  const updatePetition = async (id: string, petition: Partial<Petition>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petitions')
+        .update(petition)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitions();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar petición');
+      throw err;
+    }
+  };
+
+  const deletePetition = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('petitions')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshPetitions();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar petición');
+      throw err;
+    }
+  };
+
+  const createPetitionPayment = async (payment: Omit<PetitionPayment, 'id' | 'created_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_payments')
+        .insert([payment])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitionPayments();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear pago de petición');
+      throw err;
+    }
+  };
+
+  // Refresh functions para peticiones
+  const refreshPetitionArticles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPetitionArticles(data || []);
+    } catch (err) {
+      console.error('Error loading petition articles:', err);
+      setPetitionArticles([]);
+    }
+  };
+
+  const refreshPetitions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('petitions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPetitions(data || []);
+    } catch (err) {
+      console.error('Error loading petitions:', err);
+      setPetitions([]);
+    }
+  };
+
+  const refreshPetitionPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setPetitionPayments(data || []);
+    } catch (err) {
+      console.error('Error loading petition payments:', err);
+      setPetitionPayments([]);
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     // Evitar cargas múltiples
@@ -1375,6 +1565,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshEventPrices(), // AÑADIDO: cargar precios de eventos
           refreshEventRegistrations(), // AÑADIDO: cargar inscripciones de eventos
           refreshNews(), // AÑADIDO: cargar noticias
+          refreshPetitionArticles(), // AÑADIDO: cargar artículos de peticiones
+          refreshPetitions(), // AÑADIDO: cargar peticiones
+          refreshPetitionPayments(), // AÑADIDO: cargar pagos de peticiones
           refreshFamilyRepresentatives(), // AÑADIDO: cargar representantes de familias
         ]);
         
@@ -1448,6 +1641,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     eventPrices,
     eventRegistrations,
     news,
+    petitionArticles,
+    petitions,
+    petitionPayments,
     familyRepresentatives,
     loading,
     error,
@@ -1492,6 +1688,13 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     updateNews,
     deleteNews,
     setRepresentatives,
+    createPetitionArticle,
+    updatePetitionArticle,
+    deletePetitionArticle,
+    createPetition,
+    updatePetition,
+    deletePetition,
+    createPetitionPayment,
     refreshFamilies,
     refreshUsers,
     refreshCategories,
@@ -1504,6 +1707,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshEventPrices,
     refreshEventRegistrations,
     refreshNews,
+    refreshPetitionArticles,
+    refreshPetitions,
+    refreshPetitionPayments,
     refreshFamilyRepresentatives,
     // Funciones de autenticación
     loginUser,

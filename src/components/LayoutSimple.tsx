@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package } from 'lucide-react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../lib/permissions';
@@ -63,12 +63,12 @@ const getNavItems = (role: string | undefined, t: any) => {
     });
   }
   
-  // Crear (visual para todos)
+  // Peticiones (visual para todos)
   if (hasPermission(role, 'dashboard')) {
     items.push({ 
-      name: t('navCreate'), 
-      path: '/crear', 
-      icon: Plus 
+      name: t('navPetitions') || 'Peticiones', 
+      path: '/peticiones', 
+      icon: Package 
     });
   }
   
@@ -76,7 +76,7 @@ const getNavItems = (role: string | undefined, t: any) => {
   if (hasPermission(role, 'configuracion')) {
     items.push({ 
       name: t('navSettings'), 
-      path: '/configuracion', 
+      path: '/administracion/configuracion', 
       icon: Settings 
     });
   }
@@ -96,7 +96,7 @@ const getNavItems = (role: string | undefined, t: any) => {
         { name: t('navAdminQuotas'), path: '/administracion/cuotas', icon: CreditCard },
         { name: t('navAdminLottery'), path: '/administracion/loterias', icon: Ticket },
         { name: t('navAdminDocuments'), path: '/administracion/documentos', icon: FileText },
-        { name: t('navAdminCreate'), path: '/administracion/crear', icon: Plus },
+        { name: t('navAdminPetitions') || 'Peticiones', path: '/administracion/peticiones', icon: Package },
         { name: t('navAdminSettings'), path: '/administracion/configuracion', icon: Settings }
       ]
     });

@@ -197,13 +197,56 @@ export interface EventRegistration {
   id: string;
   event_id: string;
   user_id: string;
-  family_id: string; // Familia de cuotas (donde se imputa el coste)
-  event_family_id: string; // Familia de eventos (desde donde se apunta)
-  category_id: string;
-  includes_meal: boolean;
-  total_price: number;
-  registered_by?: string; // ID del usuario que inscribió (representante)
-  registered_at: string;
+  family_id: string;
+  status: 'pending' | 'confirmed' | 'cancelled';
+  total_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Peticiones
+export interface PetitionArticle {
+  id: string;
+  name: string;
+  section: string;
+  category: string;
+  gender: string;
+  sizes: string[];
+  price: number;
+  image_url?: string;
+  description?: string;
+  available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PetitionItem {
+  article_id: string;
+  article_name: string;
+  size: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Petition {
+  id: string;
+  user_id: string;
+  family_id: string;
+  items: PetitionItem[];
+  total_amount: number;
+  status: 'pending' | 'delivered' | 'cancelled';
+  notes?: string;
+  cancellation_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PetitionPayment {
+  id: string;
+  petition_id: string;
+  amount: number;
+  payment_month: string;
+  created_at: string;
 }
 
 // Noticias

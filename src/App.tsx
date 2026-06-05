@@ -30,9 +30,11 @@ import LoteriasAdmin from './pages/LoteriasAdmin';
 import DocumentosAdmin from './pages/administracion/DocumentosAdmin';
 import CrearAdmin from './pages/administracion/CrearAdmin';
 import ConfiguracionAdmin from './pages/administracion/ConfiguracionAdmin';
+import PeticionesAdmin from './pages/administracion/PeticionesAdmin';
 import ActualizarNoticiasEventos from './pages/administracion/ActualizarNoticiasEventos';
 import ChangePassword from './pages/ChangePassword';
 import ResetPassword from './pages/ResetPassword';
+import Peticiones from './pages/Peticiones';
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -118,10 +120,10 @@ function AppWithAuth() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/crear" element={
+              <Route path="/peticiones" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Crear />
+                    <Peticiones />
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -199,10 +201,10 @@ function AppWithAuth() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/administracion/crear" element={
+              <Route path="/administracion/peticiones" element={
                 <ProtectedRoute>
                   <Layout>
-                    <CrearAdmin />
+                    <PeticionesAdmin />
                   </Layout>
                 </ProtectedRoute>
               } />
