@@ -19,6 +19,7 @@ export default function PeticionesAdmin() {
   const [articleForm, setArticleForm] = useState({
     name: '',
     section: '',
+    category: '',
     genders: ['Unisex'],
     sizeTypes: ['Adulto', 'Infantil'],
     sizes: ['M'],
@@ -120,6 +121,7 @@ export default function PeticionesAdmin() {
     setArticleForm({
       name: '',
       section: '',
+      category: '',
       genders: ['Unisex'],
       sizeTypes: ['Adulto', 'Infantil'],
       sizes: ['M'],
@@ -151,6 +153,7 @@ export default function PeticionesAdmin() {
     setArticleForm({
       name: article.name,
       section: article.section,
+      category: article.category || '',
       genders: article.genders || ['Unisex'],
       sizeTypes: article.sizeTypes || ['Adulto'],
       sizes: article.sizes,
@@ -652,7 +655,14 @@ export default function PeticionesAdmin() {
                     </label>
                     <select
                       value={articleForm.section}
-                      onChange={(e) => setArticleForm({...articleForm, section: e.target.value})}
+                      onChange={(e) => {
+                        const selectedCategory = petitionCategories?.find(c => c.name === e.target.value);
+                        setArticleForm({
+                          ...articleForm, 
+                          section: e.target.value,
+                          category: selectedCategory?.name || ''
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                       required
                     >

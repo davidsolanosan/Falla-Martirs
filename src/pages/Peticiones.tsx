@@ -51,7 +51,7 @@ export default function Peticiones() {
     if (selectedSection !== 'Todas' && article.section !== selectedSection) return false;
     if (selectedCategory && selectedCategory !== 'Todas') {
       // Filtrar por categoría usando petition_categories
-      const category = petitionCategories?.find(c => c.id === article.category_id);
+      const category = petitionCategories?.find(c => c.name === article.category);
       if (!category || category.id !== selectedCategory) return false;
     }
     if (selectedGender !== 'Todas' && !article.genders?.includes(selectedGender)) return false;

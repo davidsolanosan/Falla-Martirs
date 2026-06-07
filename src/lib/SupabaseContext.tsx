@@ -1427,11 +1427,12 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const dbArticle = {
         ...article,
         size_types: article.sizeTypes,
-        genders: article.genders
+        gender: article.genders?.[0] || 'Unisex' // Tomar el primer género o Unisex por defecto
       };
       
       // Eliminar campos camelCase que no existen en la BD
       delete (dbArticle as any).sizeTypes;
+      delete (dbArticle as any).genders;
       
       const { data, error } = await supabase
         .from('petition_articles')
@@ -1454,11 +1455,12 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const dbArticle = {
         ...article,
         size_types: article.sizeTypes,
-        genders: article.genders
+        gender: article.genders?.[0] || 'Unisex' // Tomar el primer género o Unisex por defecto
       };
       
       // Eliminar campos camelCase que no existen en la BD
       delete (dbArticle as any).sizeTypes;
+      delete (dbArticle as any).genders;
       
       const { data, error } = await supabase
         .from('petition_articles')
@@ -1600,7 +1602,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const mappedData = (data || []).map(article => ({
         ...article,
         sizeTypes: article.size_types,
-        genders: article.genders
+        genders: article.gender ? [article.gender] : ['Unisex'] // Convertir gender singular a array
       }));
       
       setPetitionArticles(mappedData);
