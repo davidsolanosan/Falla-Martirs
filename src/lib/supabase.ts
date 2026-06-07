@@ -205,12 +205,29 @@ export interface EventRegistration {
 }
 
 // Peticiones
+export interface PetitionCategory {
+  id: string;
+  name: string;
+  description?: string;
+  icon: string;
+  color: string;
+  sort_order: number;
+  has_sizes: boolean;
+  separate_age_groups: boolean;
+  separate_genders: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PetitionArticle {
   id: string;
   name: string;
   section: string;
-  category: string;
-  gender: string;
+  category?: string;        // Mantener para compatibilidad
+  category_id?: string;     // Nueva referencia a petition_categories
+  gender?: string;          // Mantener para compatibilidad
+  genders: string[];        // Nuevo: múltiples géneros
+  sizeTypes: string[];       // Nuevo: múltiples tipos de talla
   sizes: string[];
   price: number;
   image_url?: string;

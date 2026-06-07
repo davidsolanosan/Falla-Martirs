@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionArticle, Petition, PetitionPayment } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -16,6 +16,7 @@ interface SupabaseContextType {
   eventPrices: EventPrice[];
   eventRegistrations: EventRegistration[];
   news: News[];
+  petitionCategories: PetitionCategory[];
   petitionArticles: PetitionArticle[];
   petitions: Petition[];
   petitionPayments: PetitionPayment[];
@@ -73,6 +74,9 @@ interface SupabaseContextType {
   setRepresentatives: (familyId: string, userIds: string[]) => Promise<void>;
   
   // Petitions CRUD functions
+  createPetitionCategory: (category: Omit<PetitionCategory, 'id' | 'created_at' | 'updated_at'>) => Promise<PetitionCategory>;
+  updatePetitionCategory: (id: string, category: Partial<PetitionCategory>) => Promise<PetitionCategory>;
+  deletePetitionCategory: (id: string) => Promise<void>;
   createPetitionArticle: (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => Promise<PetitionArticle>;
   updatePetitionArticle: (id: string, article: Partial<PetitionArticle>) => Promise<PetitionArticle>;
   deletePetitionArticle: (id: string) => Promise<void>;
@@ -94,6 +98,7 @@ interface SupabaseContextType {
   refreshEventPrices: () => Promise<void>;
   refreshEventRegistrations: () => Promise<void>;
   refreshNews: () => Promise<void>;
+  refreshPetitionCategories: () => Promise<void>;
   refreshPetitionArticles: () => Promise<void>;
   refreshPetitions: () => Promise<void>;
   refreshPetitionPayments: () => Promise<void>;
@@ -121,6 +126,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [eventPrices, setEventPrices] = useState<EventPrice[]>([]);
   const [eventRegistrations, setEventRegistrations] = useState<EventRegistration[]>([]);
   const [news, setNews] = useState<News[]>([]);
+  const [petitionCategories, setPetitionCategories] = useState<PetitionCategory[]>([]);
   const [petitionArticles, setPetitionArticles] = useState<PetitionArticle[]>([]);
   const [petitions, setPetitions] = useState<Petition[]>([]);
   const [petitionPayments, setPetitionPayments] = useState<PetitionPayment[]>([]);
@@ -1365,11 +1371,71 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Petitions CRUD functions
-  const createPetitionArticle = async (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => {
+  const createPetitionCategory = async (category: Omit<PetitionCategory, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
+        .from('petition_categories')
+        .insert([category])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitionCategories();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear categoría');
+      throw err;
+    }
+  };
+
+  const updatePetitionCategory = async (id: string, category: Partial<PetitionCategory>) => {
+    try {
+      const { data, error } = await supabase
+        .from('petition_categories')
+        .update(category)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshPetitionCategories();
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar categoría');
+      throw err;
+    }
+  };
+
+  const deletePetitionCategory = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('petition_categories')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshPetitionCategories();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al eliminar categoría');
+      throw err;
+    }
+  };
+
+  const createPetitionArticle = async (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      // Mapear camelCase a snake_case para la base de datos
+      const dbArticle = {
+        ...article,
+        size_types: article.sizeTypes,
+        genders: article.genders
+      };
+      
+      // Eliminar campos camelCase que no existen en la BD
+      delete (dbArticle as any).sizeTypes;
+      
+      const { data, error } = await supabase
         .from('petition_articles')
-        .insert([article])
+        .insert([dbArticle])
         .select()
         .single();
       
@@ -1384,9 +1450,19 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const updatePetitionArticle = async (id: string, article: Partial<PetitionArticle>) => {
     try {
+      // Mapear camelCase a snake_case para la base de datos
+      const dbArticle = {
+        ...article,
+        size_types: article.sizeTypes,
+        genders: article.genders
+      };
+      
+      // Eliminar campos camelCase que no existen en la BD
+      delete (dbArticle as any).sizeTypes;
+      
       const { data, error } = await supabase
         .from('petition_articles')
-        .update(article)
+        .update(dbArticle)
         .eq('id', id)
         .select()
         .single();
@@ -1491,6 +1567,26 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Refresh functions para peticiones
+  const refreshPetitionCategories = async () => {
+    try {
+      console.log('🔄 Loading petition categories...');
+      const { data, error } = await supabase
+        .from('petition_categories')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      
+      console.log('📊 Categories data:', data);
+      console.log('❌ Categories error:', error);
+      
+      if (error) throw error;
+      setPetitionCategories(data || []);
+      console.log('✅ Categories loaded:', data?.length || 0);
+    } catch (err) {
+      console.error('❌ Error loading petition categories:', err);
+      setPetitionCategories([]);
+    }
+  };
+
   const refreshPetitionArticles = async () => {
     try {
       const { data, error } = await supabase
@@ -1499,7 +1595,15 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setPetitionArticles(data || []);
+      
+      // Mapear snake_case a camelCase para el frontend
+      const mappedData = (data || []).map(article => ({
+        ...article,
+        sizeTypes: article.size_types,
+        genders: article.genders
+      }));
+      
+      setPetitionArticles(mappedData);
     } catch (err) {
       console.error('Error loading petition articles:', err);
       setPetitionArticles([]);
@@ -1565,6 +1669,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshEventPrices(), // AÑADIDO: cargar precios de eventos
           refreshEventRegistrations(), // AÑADIDO: cargar inscripciones de eventos
           refreshNews(), // AÑADIDO: cargar noticias
+          refreshPetitionCategories(), // AÑADIDO: cargar categorías de peticiones
           refreshPetitionArticles(), // AÑADIDO: cargar artículos de peticiones
           refreshPetitions(), // AÑADIDO: cargar peticiones
           refreshPetitionPayments(), // AÑADIDO: cargar pagos de peticiones
@@ -1641,6 +1746,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     eventPrices,
     eventRegistrations,
     news,
+    petitionCategories,
     petitionArticles,
     petitions,
     petitionPayments,
@@ -1688,6 +1794,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     updateNews,
     deleteNews,
     setRepresentatives,
+    createPetitionCategory,
+    updatePetitionCategory,
+    deletePetitionCategory,
     createPetitionArticle,
     updatePetitionArticle,
     deletePetitionArticle,
@@ -1707,6 +1816,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshEventPrices,
     refreshEventRegistrations,
     refreshNews,
+    refreshPetitionCategories,
     refreshPetitionArticles,
     refreshPetitions,
     refreshPetitionPayments,

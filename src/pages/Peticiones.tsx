@@ -3,18 +3,18 @@ import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingCart, Plus, Minus, X, Search, Filter, User, History, Image as ImageIcon } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Minus, X, Search, Filter, User, History, Image as ImageIcon, Shirt, Award, Users, Package as PackageIcon } from 'lucide-react';
 
 export default function Peticiones() {
   const { t } = useTranslation();
   const { user, families } = useAuth();
-  const { petitionArticles, petitions, createPetition } = useSupabase();
+  const { petitionArticles, petitionCategories, petitions, createPetition } = useSupabase();
   
   const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [selectedSection, setSelectedSection] = useState('Todas');
-  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedGender, setSelectedGender] = useState('Todas');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -23,41 +23,87 @@ export default function Peticiones() {
   // Get user's family
   const userFamily = families?.find(f => f.id === user?.family_id);
 
+  // Function to get icon component
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: React.ComponentType<any> } = {
+      'Shirt': Shirt,
+      'Award': Award,
+      'Users': Users,
+      'Package': PackageIcon,
+    };
+    return iconMap[iconName] || Package;
+  };
+
+  // Function to get color classes
+  const getColorClasses = (color: string) => {
+    const colorMap: { [key: string]: { bg: string, text: string, hover: string } } = {
+      'blue': { bg: 'bg-blue-100', text: 'text-blue-600', hover: 'hover:bg-blue-200' },
+      'yellow': { bg: 'bg-yellow-100', text: 'text-yellow-600', hover: 'hover:bg-yellow-200' },
+      'green': { bg: 'bg-green-100', text: 'text-green-600', hover: 'hover:bg-green-200' },
+      'purple': { bg: 'bg-purple-100', text: 'text-purple-600', hover: 'hover:bg-purple-200' },
+    };
+    return colorMap[color] || colorMap['blue'];
+  };
+
   // Filter articles
   const filteredArticles = petitionArticles?.filter(article => {
     if (!article.available) return false;
     if (selectedSection !== 'Todas' && article.section !== selectedSection) return false;
-    if (selectedCategory !== 'Todas' && article.category !== selectedCategory) return false;
-    if (selectedGender !== 'Todas' && article.gender !== selectedGender) return false;
+    if (selectedCategory && selectedCategory !== 'Todas') {
+      // Filtrar por categoría usando petition_categories
+      const category = petitionCategories?.find(c => c.id === article.category_id);
+      if (!category || category.id !== selectedCategory) return false;
+    }
+    if (selectedGender !== 'Todas' && !article.genders?.includes(selectedGender)) return false;
     if (searchTerm && !article.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   }) || [];
 
   const sections = ['Todas', ...[...new Set(petitionArticles?.map(a => a.section) || [])]];
-  const categories = ['Todas', ...[...new Set(petitionArticles?.map(a => a.category) || [])]];
-  const genders = ['Todas', ...[...new Set(petitionArticles?.map(a => a.gender) || [])]];
+  const categories = petitionCategories || [];
+  const genders = ['Todas', ...[...new Set(petitionArticles?.flatMap(a => a.genders || []) || [])]];
 
   const userPetitions = petitions?.filter(p => p.user_id === user?.id) || [];
 
+  // Función para traducir tallas (bilingüe)
+  const getTranslatedSize = (size) => {
+    const sizeTranslations = {
+      '2-3 años': t('size_2_3_years') || '2-3 años',
+      '4-5 años': t('size_4_5_years') || '4-5 años',
+      '6-7 años': t('size_6_7_years') || '6-7 años',
+      '8-9 años': t('size_8_9_years') || '8-9 años',
+      '10-12 años': t('size_10_12_years') || '10-12 años',
+      'Única': t('size_unique') || 'Única'
+    };
+    return sizeTranslations[size] || size;
+  };
+
   const addToCart = (article, size, quantity = 1) => {
-    const existingItem = cart.find(item => 
-      item.article_id === article.id && item.size === size
-    );
+    // Confirmación antes de añadir al carrito
+    const translatedSize = getTranslatedSize(size);
+    const confirmMessage = `${t('confirmAddToCart') || '¿Añadir'} ${article.name} (${translatedSize}) ${t('toCart') || 'al carrito'}?`;
+    console.log('Confirm message:', confirmMessage); // Debug
     
-    if (existingItem) {
-      setCart(cart.map(item => 
+    if (window.confirm(confirmMessage)) {
+      const existingItem = cart.find(item => 
         item.article_id === article.id && item.size === size
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
-      ));
-    } else {
-      setCart([...cart, {
-        article_id: article.id,
-        article_name: article.name,
-        size,
-        quantity,
-        price: article.price
-      }]);
+      );
+      
+      if (existingItem) {
+        setCart(cart.map(item => 
+          item.article_id === article.id && item.size === size
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        ));
+      } else {
+        setCart([...cart, {
+          article_id: article.id,
+          article_name: article.name,
+          size,
+          quantity,
+          price: article.price
+        }]);
+      }
     }
   };
 
@@ -172,57 +218,137 @@ export default function Peticiones() {
           {/* Catalog Tab */}
           {activeTab === 'catalog' && (
             <div className="p-6">
-              {/* Filters */}
-              <div className="mb-6 space-y-4">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                      <input
-                        type="text"
-                        placeholder={t('searchArticles') || 'Buscar artículos...'}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <select
-                      value={selectedSection}
-                      onChange={(e) => setSelectedSection(e.target.value)}
-                      className="px-4 py-2 border border-slate-200 rounded-lg"
+              {/* Categories Grid - First View */}
+              {!selectedCategory && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold text-slate-800 mb-4">
+                    {t('selectCategory') || 'Selecciona una categoría'}
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {/* All Categories Option */}
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className={`p-6 rounded-xl border-2 transition-all ${
+                        !selectedCategory
+                          ? 'border-blue-500 bg-blue-50 shadow-lg'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+                      }`}
                     >
-                      {sections.map(section => (
-                        <option key={section} value={section}>{section}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="px-4 py-2 border border-slate-200 rounded-lg"
-                    >
-                      {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={selectedGender}
-                      onChange={(e) => setSelectedGender(e.target.value)}
-                      className="px-4 py-2 border border-slate-200 rounded-lg"
-                    >
-                      {genders.map(gender => (
-                        <option key={gender} value={gender}>{gender}</option>
-                      ))}
-                    </select>
+                      <div className="flex flex-col items-center space-y-3">
+                        <div className="p-3 bg-slate-100 rounded-lg">
+                          <Package className="w-8 h-8 text-slate-600" />
+                        </div>
+                        <div className="text-center">
+                          <h3 className="font-semibold text-slate-800">
+                            {t('allCategories') || 'Todas las categorías'}
+                          </h3>
+                          <p className="text-sm text-slate-600">
+                            {petitionArticles?.length || 0} {t('items') || 'artículos'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Individual Categories */}
+                    {categories.map((category) => {
+                      const IconComponent = getIconComponent(category.icon);
+                      const colors = getColorClasses(category.color);
+                      const articleCount = petitionArticles?.filter(a => a.category_id === category.id).length || 0;
+                      
+                      return (
+                        <button
+                          key={category.id}
+                          onClick={() => setSelectedCategory(category.id)}
+                          className={`p-6 rounded-xl border-2 transition-all ${
+                            selectedCategory === category.id
+                              ? 'border-blue-500 bg-blue-50 shadow-lg'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center space-y-3">
+                            <div className={`p-3 ${colors.bg} rounded-lg`}>
+                              <IconComponent className={`w-8 h-8 ${colors.text}`} />
+                            </div>
+                            <div className="text-center">
+                              <h3 className="font-semibold text-slate-800">{category.name}</h3>
+                              <p className="text-sm text-slate-600">
+                                {articleCount} {t('items') || 'artículos'}
+                              </p>
+                              {category.description && (
+                                <p className="text-xs text-slate-500 mt-1">{category.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Articles Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredArticles.map((article) => (
-                  <div key={article.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
+              {/* Filters - Show only when category is selected */}
+              {selectedCategory && (
+                <div className="mb-6 space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>{t('backToCategories') || 'Volver a categorías'}</span>
+                    </button>
+                    <div className="flex items-center space-x-2">
+                      {(() => {
+                        const category = petitionCategories?.find(c => c.id === selectedCategory);
+                        const IconComponent = category ? getIconComponent(category.icon) : Package;
+                        const colors = category ? getColorClasses(category.color) : getColorClasses('blue');
+                        return (
+                          <>
+                            <div className={`p-2 ${colors.bg} rounded-lg`}>
+                              <IconComponent className={`w-5 h-5 ${colors.text}`} />
+                            </div>
+                            <span className="font-semibold text-slate-800">
+                              {category?.name || t('allCategories') || 'Todas las categorías'}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                        <input
+                          type="text"
+                          placeholder={t('searchArticles') || 'Buscar artículos...'}
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={selectedGender}
+                        onChange={(e) => setSelectedGender(e.target.value)}
+                        className="px-4 py-2 border border-slate-200 rounded-lg"
+                      >
+                        {genders.map(gender => (
+                          <option key={gender} value={gender}>{gender}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Articles Grid - Show only when category is selected */}
+              {selectedCategory && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredArticles.map((article) => (
+                    <div key={article.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
                     {article.image_url ? (
                       <div className="h-48 bg-slate-100">
                         <img 
@@ -248,7 +374,7 @@ export default function Peticiones() {
                       
                       <div className="space-y-1 text-sm text-slate-600 mb-3">
                         <p>{article.category} • {article.gender}</p>
-                        <p>{t('sizes') || 'Tallas'}: {article.sizes.join(', ')}</p>
+                        <p>{t('sizes') || 'Tallas'}: {article.sizes.map(size => getTranslatedSize(size)).join(', ')}</p>
                       </div>
                       
                       <div className="flex items-center justify-between mb-3">
@@ -270,7 +396,7 @@ export default function Peticiones() {
                               onClick={() => addToCart(article, size)}
                               className="flex-1 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
                             >
-                              {size}
+                              {getTranslatedSize(size)}
                             </button>
                           ))}
                         </div>
@@ -278,9 +404,10 @@ export default function Peticiones() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
 
-              {filteredArticles.length === 0 && (
+              {selectedCategory && filteredArticles.length === 0 && (
                 <div className="text-center py-12">
                   <Package className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                   <p className="text-slate-600">{t('noArticlesFound') || 'No se encontraron artículos'}</p>
@@ -318,7 +445,7 @@ export default function Peticiones() {
                     <div className="space-y-2 mb-3">
                       {petition.items.map((item, index) => (
                         <div key={index} className="flex justify-between items-center text-sm">
-                          <span className="text-slate-700">{item.article_name} ({item.size}) x {item.quantity}</span>
+                          <span className="text-slate-700">{item.article_name} ({getTranslatedSize(item.size)}) x {item.quantity}</span>
                           <span className="text-slate-600">€{(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}
@@ -383,7 +510,7 @@ export default function Peticiones() {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <h4 className="font-medium text-slate-800">{item.article_name}</h4>
-                              <p className="text-sm text-slate-600">{item.size}</p>
+                              <p className="text-sm text-slate-600">{getTranslatedSize(item.size)}</p>
                             </div>
                             <button
                               onClick={() => removeFromCart(item.article_id, item.size)}
