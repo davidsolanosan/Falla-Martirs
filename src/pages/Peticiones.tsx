@@ -253,7 +253,7 @@ export default function Peticiones() {
                     {categories.map((category) => {
                       const IconComponent = getIconComponent(category.icon);
                       const colors = getColorClasses(category.color);
-                      const articleCount = petitionArticles?.filter(a => a.category_id === category.id).length || 0;
+                      const articleCount = petitionArticles?.filter(a => a.category === category.name && a.available).length || 0;
                       
                       return (
                         <button
