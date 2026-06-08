@@ -76,7 +76,7 @@ const getNavItems = (role: string | undefined, t: any) => {
   if (hasPermission(role, 'configuracion')) {
     items.push({ 
       name: t('navSettings'), 
-      path: '/administracion/configuracion', 
+      path: role === 'admin' || role === 'master_admin' ? '/administracion/configuracion' : '/configuracion', 
       icon: Settings 
     });
   }
