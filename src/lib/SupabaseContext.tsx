@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -21,6 +21,8 @@ interface SupabaseContextType {
   petitions: Petition[];
   petitionPayments: PetitionPayment[];
   familyRepresentatives: {family_id: string, user_id: string}[];
+  casalRentals: CasalRental[];
+  casalSettings: CasalSettings[];
   loading: boolean;
   error: string | null;
   
@@ -103,6 +105,14 @@ interface SupabaseContextType {
   refreshPetitions: () => Promise<void>;
   refreshPetitionPayments: () => Promise<void>;
   refreshFamilyRepresentatives: () => Promise<void>;
+  refreshCasalRentals: () => Promise<void>;
+  refreshCasalSettings: () => Promise<void>;
+  
+  // Casal functions
+  createCasalRental: (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => Promise<CasalRental>;
+  updateCasalRental: (id: string, rental: Partial<CasalRental>) => Promise<CasalRental>;
+  deleteCasalRental: (id: string) => Promise<void>;
+  updateCasalSettings: (id: string, settings: Partial<CasalSettings>) => Promise<CasalSettings>;
   
   // Funciones de autenticación
   loginUser: (email: string, password: string) => Promise<{user: User, isFirstLogin: boolean}>;
@@ -131,6 +141,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [petitions, setPetitions] = useState<Petition[]>([]);
   const [petitionPayments, setPetitionPayments] = useState<PetitionPayment[]>([]);
   const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
+  const [casalRentals, setCasalRentals] = useState<CasalRental[]>([]);
+  const [casalSettings, setCasalSettings] = useState<CasalSettings[]>([]);
   
   // Banderas para evitar cargas múltiples
   const [isLoadingLotteryDates, setIsLoadingLotteryDates] = useState(false);
@@ -1423,20 +1435,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const createPetitionArticle = async (article: Omit<PetitionArticle, 'id' | 'created_at' | 'updated_at'>) => {
     try {
-      // Mapear camelCase a snake_case para la base de datos
-      const dbArticle = {
-        ...article,
-        size_types: article.sizeTypes,
-        gender: article.genders?.[0] || 'Unisex' // Tomar el primer género o Unisex por defecto
-      };
-      
-      // Eliminar campos camelCase que no existen en la BD
-      delete (dbArticle as any).sizeTypes;
-      delete (dbArticle as any).genders;
-      
       const { data, error } = await supabase
         .from('petition_articles')
-        .insert([dbArticle])
+        .insert([article])
         .select()
         .single();
       
@@ -1451,20 +1452,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const updatePetitionArticle = async (id: string, article: Partial<PetitionArticle>) => {
     try {
-      // Mapear camelCase a snake_case para la base de datos
-      const dbArticle = {
-        ...article,
-        size_types: article.sizeTypes,
-        gender: article.genders?.[0] || 'Unisex' // Tomar el primer género o Unisex por defecto
-      };
-      
-      // Eliminar campos camelCase que no existen en la BD
-      delete (dbArticle as any).sizeTypes;
-      delete (dbArticle as any).genders;
-      
       const { data, error } = await supabase
         .from('petition_articles')
-        .update(dbArticle)
+        .update(article)
         .eq('id', id)
         .select()
         .single();
@@ -1597,15 +1587,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      
-      // Mapear snake_case a camelCase para el frontend
-      const mappedData = (data || []).map(article => ({
-        ...article,
-        sizeTypes: article.size_types,
-        genders: article.gender ? [article.gender] : ['Unisex'] // Convertir gender singular a array
-      }));
-      
-      setPetitionArticles(mappedData);
+      setPetitionArticles(data || []);
     } catch (err) {
       console.error('Error loading petition articles:', err);
       setPetitionArticles([]);
@@ -1639,6 +1621,110 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error('Error loading petition payments:', err);
       setPetitionPayments([]);
+    }
+  };
+
+  const refreshCasalRentals = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('casal_rentals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCasalRentals(data || []);
+    } catch (err) {
+      console.error('Error loading casal rentals:', err);
+      setCasalRentals([]);
+    }
+  };
+
+  const refreshCasalSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('casal_settings')
+        .select('*');
+
+      console.log('refreshCasalSettings - data:', data);
+      console.log('refreshCasalSettings - error:', error);
+
+      if (error) throw error;
+      setCasalSettings(data || []);
+    } catch (err: any) {
+      console.error('Error loading casal settings:', err);
+      // Si la tabla no existe o hay error de RLS, no es crítico
+      // La aplicación puede funcionar sin configuración inicial
+      setCasalSettings([]);
+    }
+  };
+
+  const createCasalRental = async (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('casal_rentals')
+        .insert(rental)
+        .select()
+        .single();
+
+      if (error) throw error;
+      await refreshCasalRentals();
+      return data;
+    } catch (err) {
+      console.error('Error creating casal rental:', err);
+      throw err;
+    }
+  };
+
+  const updateCasalRental = async (id: string, rental: Partial<CasalRental>) => {
+    try {
+      const { data, error } = await supabase
+        .from('casal_rentals')
+        .update(rental)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      await refreshCasalRentals();
+      return data;
+    } catch (err) {
+      console.error('Error updating casal rental:', err);
+      throw err;
+    }
+  };
+
+  const deleteCasalRental = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('casal_rentals')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      await refreshCasalRentals();
+    } catch (err) {
+      console.error('Error deleting casal rental:', err);
+      throw err;
+    }
+  };
+
+  const updateCasalSettings = async (id: string, settings: Partial<CasalSettings>) => {
+    try {
+      console.log('updateCasalSettings - id:', id);
+      console.log('updateCasalSettings - settings:', settings);
+      const { error } = await supabase
+        .from('casal_settings')
+        .update(settings)
+        .eq('id', id);
+
+      console.log('updateCasalSettings - error:', error);
+
+      if (error) throw error;
+      await refreshCasalSettings();
+      return;
+    } catch (err) {
+      console.error('Error updating casal settings:', err);
+      throw err;
     }
   };
 
@@ -1676,6 +1762,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshPetitions(), // AÑADIDO: cargar peticiones
           refreshPetitionPayments(), // AÑADIDO: cargar pagos de peticiones
           refreshFamilyRepresentatives(), // AÑADIDO: cargar representantes de familias
+          refreshCasalRentals(), // AÑADIDO: cargar alquileres de casal
+          refreshCasalSettings(), // AÑADIDO: cargar configuración de casal
         ]);
         
         // Check current auth state - DESHABILITADO para evitar conflictos con AuthContext
@@ -1753,6 +1841,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     petitions,
     petitionPayments,
     familyRepresentatives,
+    casalRentals,
+    casalSettings,
     loading,
     error,
     signIn,
@@ -1823,6 +1913,13 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshPetitions,
     refreshPetitionPayments,
     refreshFamilyRepresentatives,
+    refreshCasalRentals,
+    refreshCasalSettings,
+    // Casal functions
+    createCasalRental,
+    updateCasalRental,
+    deleteCasalRental,
+    updateCasalSettings,
     // Funciones de autenticación
     loginUser,
     changePassword,

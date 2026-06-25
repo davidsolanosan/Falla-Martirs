@@ -51,17 +51,17 @@ export default function Peticiones() {
     if (selectedSection !== 'Todas' && article.section !== selectedSection) return false;
     if (selectedCategory && selectedCategory !== 'Todas') {
       // Filtrar por categoría usando petition_categories
-      const category = petitionCategories?.find(c => c.name === article.category);
+      const category = petitionCategories?.find(c => c.id === article.category_id);
       if (!category || category.id !== selectedCategory) return false;
     }
-    if (selectedGender !== 'Todas' && !article.genders?.includes(selectedGender)) return false;
+    if (selectedGender !== 'Todas' && article.gender !== selectedGender) return false;
     if (searchTerm && !article.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   }) || [];
 
   const sections = ['Todas', ...[...new Set(petitionArticles?.map(a => a.section) || [])]];
   const categories = petitionCategories || [];
-  const genders = ['Todas', ...[...new Set(petitionArticles?.flatMap(a => a.genders || []) || [])]];
+  const genders = ['Todas', ...[...new Set(petitionArticles?.map(a => a.gender) || [])]];
 
   const userPetitions = petitions?.filter(p => p.user_id === user?.id) || [];
 
@@ -253,7 +253,7 @@ export default function Peticiones() {
                     {categories.map((category) => {
                       const IconComponent = getIconComponent(category.icon);
                       const colors = getColorClasses(category.color);
-                      const articleCount = petitionArticles?.filter(a => a.category === category.name && a.available).length || 0;
+                      const articleCount = petitionArticles?.filter(a => a.category_id === category.id).length || 0;
                       
                       return (
                         <button

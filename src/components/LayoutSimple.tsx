@@ -68,7 +68,10 @@ const getNavItems = (role: string | undefined, t: any) => {
     items.push({ 
       name: t('navPetitions') || 'Peticiones', 
       path: '/peticiones', 
-      icon: Package 
+      icon: Package,
+      subItems: [
+        { name: t('navCasal') || 'Alquiler Casal', path: '/casal', icon: Home }
+      ]
     });
   }
   
@@ -76,7 +79,7 @@ const getNavItems = (role: string | undefined, t: any) => {
   if (hasPermission(role, 'configuracion')) {
     items.push({ 
       name: t('navSettings'), 
-      path: role === 'admin' || role === 'master_admin' ? '/administracion/configuracion' : '/configuracion', 
+      path: '/administracion/configuracion', 
       icon: Settings 
     });
   }
@@ -97,6 +100,7 @@ const getNavItems = (role: string | undefined, t: any) => {
         { name: t('navAdminLottery'), path: '/administracion/loterias', icon: Ticket },
         { name: t('navAdminDocuments'), path: '/administracion/documentos', icon: FileText },
         { name: t('navAdminPetitions') || 'Peticiones', path: '/administracion/peticiones', icon: Package },
+        { name: t('navAdminCasal') || 'Administrar Casal', path: '/administracion/casal', icon: Home },
         { name: t('navAdminSettings'), path: '/administracion/configuracion', icon: Settings }
       ]
     });
@@ -111,7 +115,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user: supabaseUser } = useSupabase(); // Para datos adicionales si es necesario
   const { t, language, setLanguage } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   
   const navItems = getNavItems(user?.role || 'user', t);
   
@@ -135,28 +139,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             const isAdminItem = item.isAdmin;
+            const isOpen = openMenus[item.name] || false;
             
-            if (isAdminItem) {
+            if (item.subItems) {
               return (
                 <div key={item.name} className="space-y-1">
                   <button
-                    onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                    onClick={() => setOpenMenus(prev => ({ ...prev, [item.name]: !prev[item.name] }))}
                     className={`w-full flex items-center px-2 py-1.5 text-sm font-medium rounded-xl transition-colors ${
-                      location.pathname.startsWith('/administracion')
-                        ? "bg-slate-100 text-slate-800" 
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      isAdminItem
+                        ? (location.pathname.startsWith('/administracion')
+                            ? "bg-slate-100 text-slate-800" 
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")
+                        : (isActive
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900")
                     }`}
                   >
                     <Icon className="w-4 h-4 mr-3" />
                     {item.name}
-                    {isAdminMenuOpen ? (
+                    {isOpen ? (
                       <ChevronDown className="w-4 h-4 ml-auto" />
                     ) : (
                       <ChevronRight className="w-4 h-4 ml-auto" />
                     )}
                   </button>
                   
-                  {isAdminMenuOpen && item.subItems && (
+                  {isOpen && item.subItems && (
                     <div className="ml-4 space-y-1">
                       {item.subItems.map((subItem) => {
                         const SubIcon = subItem.icon;
@@ -257,20 +266,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 
-                // Si es un item con subitems (como Administración)
+                // Si es un item con subitems (como Administración o Peticiones)
                 if (item.subItems) {
+                  const isOpen = openMenus[item.name] || false;
                   return (
                     <div key={item.name} className="space-y-1">
                       <button
-                        onClick={() => setIsAdminMenuOpen(!isAdminMenuOpen)}
+                        onClick={() => setOpenMenus(prev => ({ ...prev, [item.name]: !prev[item.name] }))}
                         className="w-full flex items-center p-3 rounded-xl border border-slate-100 text-sm font-medium text-slate-700 hover:bg-slate-50"
                       >
                         <Icon className="w-5 h-5 mr-2 text-slate-400" />
                         {item.name}
-                        <ChevronRight className={`w-4 h-4 ml-auto transition-transform ${isAdminMenuOpen ? 'rotate-90' : ''}`} />
+                        <ChevronRight className={`w-4 h-4 ml-auto transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                       </button>
                       
-                      {isAdminMenuOpen && (
+                      {isOpen && (
                         <div className="ml-4 space-y-1">
                           {item.subItems.map((subItem) => {
                             const SubIcon = subItem.icon;

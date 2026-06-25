@@ -10,6 +10,7 @@ import { hasPermission, canAccessRoute } from '../lib/permissions';
 
 export interface AuthUser {
   id: string;
+  authId?: string; // ID de autenticación de Supabase (auth.users)
   email: string;
   name: string;
   surname?: string;
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (userData) {
             setUser({
               id: userData.id,
+              authId: session.user.id, // ID de autenticación de Supabase
               email: userData.email,
               name: userData.name,
               surname: userData.surname,
@@ -81,49 +83,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     checkSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            // Obtener datos del usuario desde la tabla users
-            const { data: userData, error } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+    // Listen for auth changes - DESHABILITADO para evitar conflictos con autenticación personal
+    // const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    //   async (event, session) => {
+    //     console.log('Auth state changed:', event, session);
+    //
+    //     if (event === 'SIGNED_IN' && session?.user) {
+    //       try {
+    //         // Obtener datos del usuario desde la tabla users
+    //         const { data: userData, error } = await supabase
+    //           .from('users')
+    //           .select('*')
+    //           .eq('id', session.user.id)
+    //           .single();
+    //
+    //         if (error) {
+    //           console.error('Error loading user data:', error);
+    //           return;
+    //         }
+    //
+    //         if (userData) {
+    //           setUser({
+    //             id: userData.id,
+    //             authId: session.user.id, // ID de autenticación de Supabase
+    //             email: userData.email,
+    //             name: userData.name,
+    //             surname: userData.surname,
+    //             role: userData.role as Role,
+    //             has_temp_password: userData.has_temp_password,
+    //             first_login: userData.first_login,
+    //             dni: userData.dni,
+    //             birth_year: userData.birth_year,
+    //             family_id: userData.family_id
+    //           });
+    //         }
+    //       } catch (error) {
+    //         console.error('Error in SIGNED_IN handler:', error);
+    //       }
+    //     } else if (event === 'SIGNED_OUT') {
+    //       setUser(null);
+    //     }
+    //   }
+    // );
 
-            if (error) {
-              console.error('Error loading user data:', error);
-              return;
-            }
-
-            if (userData) {
-              setUser({
-                id: userData.id,
-                email: userData.email,
-                name: userData.name,
-                surname: userData.surname,
-                role: userData.role as Role,
-                has_temp_password: userData.has_temp_password,
-                first_login: userData.first_login,
-                dni: userData.dni,
-                birth_year: userData.birth_year,
-                family_id: userData.family_id
-              });
-            }
-          } catch (error) {
-            console.error('Error in SIGNED_IN handler:', error);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    // return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -140,11 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (userError || !userData) {
-        console.error('Usuario no encontrado:', userError);
         return { success: false, error: 'Usuario no encontrado' };
       }
-
-      console.log('Usuario encontrado:', userData.email, 'DNI:', userData.dni, 'Birth_year:', userData.birth_year);
 
       // Verificar contraseña
       if (email === 'newalfree@gmail.com' && password === 'SUPER123A1980') {
@@ -180,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Establecer usuario en el contexto
       const authUser = {
         id: userData.id,
+        authId: userData.id, // Por ahora usar el mismo ID (se actualizará con la sesión)
         email: userData.email,
         name: userData.name,
         surname: userData.surname,

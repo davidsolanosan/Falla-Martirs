@@ -19,6 +19,7 @@ import Eventos from './pages/Eventos';
 import Documentos from './pages/Documentos';
 import Crear from './pages/Crear';
 import Configuracion from './pages/Configuracion';
+import Casal from './pages/Casal';
 
 // Import de páginas de administración
 import InicioAdmin from './pages/administracion/InicioAdmin';
@@ -31,6 +32,7 @@ import DocumentosAdmin from './pages/administracion/DocumentosAdmin';
 import CrearAdmin from './pages/administracion/CrearAdmin';
 import ConfiguracionAdmin from './pages/administracion/ConfiguracionAdmin';
 import PeticionesAdmin from './pages/administracion/PeticionesAdmin';
+import CasalAdmin from './pages/administracion/CasalAdmin';
 import ActualizarNoticiasEventos from './pages/administracion/ActualizarNoticiasEventos';
 import ChangePassword from './pages/ChangePassword';
 import ResetPassword from './pages/ResetPassword';
@@ -128,6 +130,14 @@ function AppWithAuth() {
                 </ProtectedRoute>
               } />
               
+              <Route path="/casal" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Casal />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
               <Route path="/configuracion" element={
                 <ProtectedRoute>
                   <Layout>
@@ -205,6 +215,14 @@ function AppWithAuth() {
                 <ProtectedRoute>
                   <Layout>
                     <PeticionesAdmin />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/administracion/casal" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CasalAdmin />
                   </Layout>
                 </ProtectedRoute>
               } />

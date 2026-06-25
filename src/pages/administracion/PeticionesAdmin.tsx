@@ -19,9 +19,8 @@ export default function PeticionesAdmin() {
   const [articleForm, setArticleForm] = useState({
     name: '',
     section: '',
-    category: '',
-    genders: ['Unisex'],
-    sizeTypes: ['Adulto', 'Infantil'],
+    category: 'Adulto',
+    gender: 'Unisex',
     sizes: ['M'],
     price: 0,
     image_url: '',
@@ -35,15 +34,11 @@ export default function PeticionesAdmin() {
     description: '',
     icon: 'Package',
     color: 'blue',
-    sort_order: 0,
-    has_sizes: true,
-    separate_age_groups: true,
-    separate_genders: true
+    sort_order: 0
   });
 
   const ADULT_SIZES = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
-  const CHILD_SIZES = ['2-3 años', '4-5 años', '6-7 años', '8-9 años', '10-11 años', '12-13 años'];
-  const KID_SIZES = ['2-3 años', '4-5 años', '6-7 años'];
+  const CHILD_SIZES = ['2-3 años', '4-5 años', '6-7 años', '8-9 años', '10-12 años'];
   const UNIQUE_SIZE = ['Única'];
 
   // Icon options
@@ -71,59 +66,19 @@ export default function PeticionesAdmin() {
     { value: 'orange', label: 'Naranja', class: 'bg-orange-100 text-orange-600' }
   ];
 
-  const getSelectedCategory = () => {
-    return petitionCategories?.find(c => c.name === articleForm.section);
-  };
-
   const getAvailableSizes = () => {
-    const category = getSelectedCategory();
-    
-    if (!category?.has_sizes) {
-      return UNIQUE_SIZE;
-    }
-    
-    const allSizes = [];
-    
-    if (category?.separate_age_groups && articleForm.sizeTypes?.includes('Adulto')) {
-      allSizes.push(...ADULT_SIZES);
-    }
-    if (category?.separate_age_groups && articleForm.sizeTypes?.includes('Infantil')) {
-      allSizes.push(...CHILD_SIZES);
-    }
-    
-    if (!category?.separate_age_groups) {
-      allSizes.push(...ADULT_SIZES, ...CHILD_SIZES);
-    }
-    
-    return [...new Set(allSizes)].sort();
+    if (articleForm.category === 'Adulto') return ADULT_SIZES;
+    if (articleForm.category === 'Infantil') return CHILD_SIZES;
+    if (articleForm.section === 'Insignias' || articleForm.section === 'Bandas') return UNIQUE_SIZE;
+    return ADULT_SIZES;
   };
-
-  // Efecto para ajustar características cuando cambia la sección
-  useEffect(() => {
-    const category = getSelectedCategory();
-    if (category) {
-      // Resetear según la configuración de la nueva sección
-      const updatedForm = {
-        ...articleForm,
-        // Si la sección no tiene tallas, eliminar tallas
-        sizes: category.has_sizes ? articleForm.sizes : [],
-        // Si no separa grupos de edad, eliminar tipos de talla
-        sizeTypes: category.has_sizes && category.separate_age_groups ? articleForm.sizeTypes : [],
-        // Si no separa géneros, resetear a Unisex
-        genders: category.separate_genders ? articleForm.genders : ['Unisex']
-      };
-      
-      setArticleForm(updatedForm);
-    }
-  }, [articleForm.section]); // Solo se ejecuta cuando cambia la sección
 
   const resetArticleForm = () => {
     setArticleForm({
       name: '',
       section: '',
-      category: '',
-      genders: ['Unisex'],
-      sizeTypes: ['Adulto', 'Infantil'],
+      category: 'Adulto',
+      gender: 'Unisex',
       sizes: ['M'],
       price: 0,
       image_url: '',
@@ -153,9 +108,8 @@ export default function PeticionesAdmin() {
     setArticleForm({
       name: article.name,
       section: article.section,
-      category: article.category || '',
-      genders: article.genders || ['Unisex'],
-      sizeTypes: article.sizeTypes || ['Adulto'],
+      category: article.category,
+      gender: article.gender,
       sizes: article.sizes,
       price: article.price,
       image_url: article.image_url || '',
@@ -176,16 +130,14 @@ export default function PeticionesAdmin() {
     }
   };
 
+  // Category functions
   const resetCategoryForm = () => {
     setCategoryForm({
       name: '',
       description: '',
       icon: 'Package',
       color: 'blue',
-      sort_order: petitionCategories?.length || 0,
-      has_sizes: true,
-      separate_age_groups: true,
-      separate_genders: true
+      sort_order: petitionCategories?.length || 0
     });
     setEditingCategory(null);
   };
@@ -201,6 +153,7 @@ export default function PeticionesAdmin() {
       setShowCategoryForm(false);
       resetCategoryForm();
       console.log('🔄 Refreshing categories...');
+      // Refrescar la lista de categorías
       await refreshPetitionCategories();
       console.log('✅ Category saved and refreshed');
     } catch (error) {
@@ -216,10 +169,7 @@ export default function PeticionesAdmin() {
       description: category.description || '',
       icon: category.icon,
       color: category.color,
-      sort_order: category.sort_order,
-      has_sizes: category.has_sizes ?? true,
-      separate_age_groups: category.separate_age_groups ?? true,
-      separate_genders: category.separate_genders ?? true
+      sort_order: category.sort_order
     });
     setShowCategoryForm(true);
   };
@@ -228,6 +178,7 @@ export default function PeticionesAdmin() {
     if (confirm('¿Estás seguro de que quieres eliminar esta sección? Los artículos asociados perderán esta sección.')) {
       try {
         await deletePetitionCategory(id);
+        // Refrescar la lista de categorías
         await refreshPetitionCategories();
       } catch (error) {
         console.error('Error deleting category:', error);
@@ -268,9 +219,11 @@ export default function PeticionesAdmin() {
   const deliveredPetitions = petitions?.filter(p => p.status === 'delivered') || [];
   const cancelledPetitions = petitions?.filter(p => p.status === 'cancelled') || [];
 
+  // Count available/unavailable articles
   const availableArticles = petitionArticles?.filter(a => a.available).length || 0;
   const unavailableArticles = petitionArticles?.filter(a => !a.available).length || 0;
 
+  // Debug logs
   console.log('📋 Current petitionCategories:', petitionCategories);
   console.log('📊 Categories count:', petitionCategories?.length || 0);
 
@@ -361,54 +314,56 @@ export default function PeticionesAdmin() {
             </button>
           </div>
 
-          {/* Quick Actions for Articles */}
-          {activeTab === 'articles' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-slate-700">
-                    {t('quickActions') || 'Acciones Rápidas'}:
-                  </span>
-                  <button
-                    onClick={async () => {
-                      if (confirm(`¿Marcar todos los artículos como disponibles? (${unavailableArticles} artículos)`)) {
-                        try {
-                          const unavailableArticlesList = petitionArticles?.filter(a => !a.available) || [];
-                          for (const article of unavailableArticlesList) {
-                            await updatePetitionArticle(article.id, { available: true });
-                          }
-                        } catch (error) {
-                          console.error('Error updating articles:', error);
-                          alert('Error al actualizar artículos');
+        {/* Quick Actions for Articles */}
+        {activeTab === 'articles' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-slate-700">
+                  {t('quickActions') || 'Acciones Rápidas'}:
+                </span>
+                <button
+                  onClick={async () => {
+                    if (confirm(`¿Marcar todos los artículos como disponibles? (${unavailableArticles} artículos)`)) {
+                      try {
+                        const unavailableArticlesList = petitionArticles?.filter(a => !a.available) || [];
+                        for (const article of unavailableArticlesList) {
+                          await updatePetitionArticle(article.id, { available: true });
                         }
+                        await refreshPetitionArticles();
+                      } catch (error) {
+                        console.error('Error updating articles:', error);
+                        alert('Error al actualizar artículos');
                       }
-                    }}
-                    className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
-                  >
-                    {t('markAllAvailable') || 'Marcar todos como disponibles'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (confirm(`¿Marcar todos los artículos como no disponibles? (${availableArticles} artículos)`)) {
-                        try {
-                          const availableArticlesList = petitionArticles?.filter(a => a.available) || [];
-                          for (const article of availableArticlesList) {
-                            await updatePetitionArticle(article.id, { available: false });
-                          }
-                        } catch (error) {
-                          console.error('Error updating articles:', error);
-                          alert('Error al actualizar artículos');
+                    }
+                  }}
+                  className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm"
+                >
+                  {t('markAllAvailable') || 'Marcar todos como disponibles'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (confirm(`¿Marcar todos los artículos como no disponibles? (${availableArticles} artículos)`)) {
+                      try {
+                        const availableArticlesList = petitionArticles?.filter(a => a.available) || [];
+                        for (const article of availableArticlesList) {
+                          await updatePetitionArticle(article.id, { available: false });
                         }
+                        await refreshPetitionArticles();
+                      } catch (error) {
+                        console.error('Error updating articles:', error);
+                        alert('Error al actualizar artículos');
                       }
-                    }}
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
-                  >
-                    {t('markAllUnavailable') || 'Marcar todos como no disponibles'}
-                  </button>
-                </div>
+                    }
+                  }}
+                  className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                >
+                  {t('markAllUnavailable') || 'Marcar todos como no disponibles'}
+                </button>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {/* Categories Tab */}
           {activeTab === 'categories' && (
@@ -655,14 +610,7 @@ export default function PeticionesAdmin() {
                     </label>
                     <select
                       value={articleForm.section}
-                      onChange={(e) => {
-                        const selectedCategory = petitionCategories?.find(c => c.name === e.target.value);
-                        setArticleForm({
-                          ...articleForm, 
-                          section: e.target.value,
-                          category: selectedCategory?.name || ''
-                        });
-                      }}
+                      onChange={(e) => setArticleForm({...articleForm, section: e.target.value})}
                       className="w-full px-3 py-2 border border-slate-200 rounded-lg"
                       required
                     >
@@ -676,97 +624,36 @@ export default function PeticionesAdmin() {
                   </div>
                 </div>
 
-                {/* Mostrar opciones según la configuración de la sección */}
-                {getSelectedCategory() && (
-                  <>
-                    {/* Tipos de Talla - solo si la sección tiene tallas y separa grupos de edad */}
-                    {getSelectedCategory().has_sizes && getSelectedCategory().separate_age_groups && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          {t('sizeTypes') || 'Tipos de Talla'} *
-                        </label>
-                        <div className="space-y-2">
-                          {['Adulto', 'Infantil'].map((type) => (
-                            <label key={type} className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={articleForm.sizeTypes?.includes(type) || false}
-                                onChange={(e) => {
-                                  const newTypes = e.target.checked
-                                    ? [...(articleForm.sizeTypes || []), type]
-                                    : (articleForm.sizeTypes || []).filter(t => t !== type);
-                                  setArticleForm({...articleForm, sizeTypes: newTypes, sizes: []});
-                                }}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-slate-700">
-                                {type === 'Adulto' ? (t('adult') || 'Adulto') : (t('child') || 'Infantil')}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Géneros - mostrar siempre si la sección separa géneros */}
-                    {/* ✅ FIX: Eliminado el <div className="grid"> innecesario que envolvía este bloque */}
-                    {getSelectedCategory().separate_genders && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          {t('genders') || 'Géneros'} *
-                        </label>
-                        <div className="space-y-2">
-                          {['Hombre', 'Mujer', 'Unisex'].map((gender) => (
-                            <label key={gender} className="flex items-center space-x-2 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={articleForm.genders?.includes(gender) || false}
-                                onChange={(e) => {
-                                  const newGenders = e.target.checked
-                                    ? [...(articleForm.genders || []), gender]
-                                    : (articleForm.genders || []).filter(g => g !== gender);
-                                  setArticleForm({...articleForm, genders: newGenders});
-                                }}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-slate-700">
-                                {gender === 'Hombre' ? (t('male') || 'Hombre') : 
-                                 gender === 'Mujer' ? (t('female') || 'Mujer') : 
-                                 (t('unisex') || 'Unisex')}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Si no separa grupos de edad pero tiene tallas, mostrar todas las tallas juntas */}
-                    {getSelectedCategory().has_sizes && !getSelectedCategory().separate_age_groups && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          {t('availableSizes') || 'Tallas Disponibles'} *
-                        </label>
-                        <div className="text-sm text-slate-600 bg-blue-50 p-3 rounded-lg">
-                          {getAvailableSizes().join(', ')}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Si no tiene tallas, mostrar mensaje */}
-                    {!getSelectedCategory().has_sizes && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">
-                          {t('sizes') || 'Tallas'}
-                        </label>
-                        <div className="text-sm text-slate-600 bg-gray-50 p-3 rounded-lg">
-                          {t('noSizesNeeded') || 'Esta sección no requiere tallas'}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
                 <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {t('sizeType') || 'Tipo de Talla'} *
+                    </label>
+                    <select
+                      value={articleForm.category}
+                      onChange={(e) => setArticleForm({...articleForm, category: e.target.value, sizes: []})}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    >
+                      <option value="Adulto">{t('adult') || 'Adulto'}</option>
+                      <option value="Infantil">{t('child') || 'Infantil'}</option>
+                      <option value="Niño">{t('kid') || 'Niño'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {t('gender') || 'Género'} *
+                    </label>
+                    <select
+                      value={articleForm.gender}
+                      onChange={(e) => setArticleForm({...articleForm, gender: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg"
+                    >
+                      <option value="Hombre">{t('male') || 'Hombre'}</option>
+                      <option value="Mujer">{t('female') || 'Mujer'}</option>
+                      <option value="Unisex">{t('unisex') || 'Unisex'}</option>
+                      <option value="Niño">{t('kid') || 'Niño'}</option>
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       {t('price') || 'Precio'} (€) *
@@ -783,111 +670,27 @@ export default function PeticionesAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
                     {t('sizes') || 'Tallas'} *
                   </label>
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Columna Adulto */}
-                    {articleForm.sizeTypes?.includes('Adulto') && (
-                      <div className="bg-slate-50 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="font-medium text-slate-800 flex items-center">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                            {t('adult') || 'Adulto'}
-                          </h4>
-                          <label className="flex items-center space-x-2 cursor-pointer hover:bg-white p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={ADULT_SIZES.every(size => articleForm.sizes.includes(size))}
-                              onChange={(e) => {
-                                const newSizes = e.target.checked
-                                  ? [...new Set([...articleForm.sizes, ...ADULT_SIZES])]
-                                  : articleForm.sizes.filter(size => !ADULT_SIZES.includes(size));
-                                setArticleForm({...articleForm, sizes: newSizes});
-                              }}
-                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-xs font-medium text-blue-600">
-                              {t('selectAll') || 'Seleccionar todo'}
-                            </span>
-                          </label>
-                        </div>
-                        <div className="space-y-2">
-                          {ADULT_SIZES.map((size) => (
-                            <label key={size} className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded">
-                              <input
-                                type="checkbox"
-                                checked={articleForm.sizes.includes(size)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setArticleForm({...articleForm, sizes: [...articleForm.sizes, size]});
-                                  } else {
-                                    setArticleForm({...articleForm, sizes: articleForm.sizes.filter(s => s !== size)});
-                                  }
-                                }}
-                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-slate-700">{size}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Columna Infantil */}
-                    {articleForm.sizeTypes?.includes('Infantil') && (
-                      <div className="bg-slate-50 rounded-lg p-4">
-                        <div className="flex justify-between items-center mb-3">
-                          <h4 className="font-medium text-slate-800 flex items-center">
-                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                            {t('child') || 'Infantil'}
-                          </h4>
-                          <label className="flex items-center space-x-2 cursor-pointer hover:bg-white p-1 rounded">
-                            <input
-                              type="checkbox"
-                              checked={CHILD_SIZES.every(size => articleForm.sizes.includes(size))}
-                              onChange={(e) => {
-                                const newSizes = e.target.checked
-                                  ? [...new Set([...articleForm.sizes, ...CHILD_SIZES])]
-                                  : articleForm.sizes.filter(size => !CHILD_SIZES.includes(size));
-                                setArticleForm({...articleForm, sizes: newSizes});
-                              }}
-                              className="rounded border-slate-300 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-xs font-medium text-green-600">
-                              {t('selectAll') || 'Seleccionar todo'}
-                            </span>
-                          </label>
-                        </div>
-                        <div className="space-y-2">
-                          {CHILD_SIZES.map((size) => (
-                            <label key={size} className="flex items-center space-x-2 cursor-pointer hover:bg-white p-2 rounded">
-                              <input
-                                type="checkbox"
-                                checked={articleForm.sizes.includes(size)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setArticleForm({...articleForm, sizes: [...articleForm.sizes, size]});
-                                  } else {
-                                    setArticleForm({...articleForm, sizes: articleForm.sizes.filter(s => s !== size)});
-                                  }
-                                }}
-                                className="rounded border-slate-300 text-green-600 focus:ring-green-500"
-                              />
-                              <span className="text-sm text-slate-700">{size}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Si no hay tipos de talla seleccionados */}
-                    {(!articleForm.sizeTypes || articleForm.sizeTypes.length === 0) && (
-                      <div className="col-span-2 text-center text-slate-500 bg-slate-50 rounded-lg p-8">
-                        {t('selectSizeTypesFirst') || 'Selecciona primero los tipos de talla'}
-                      </div>
-                    )}
+                  <div className="space-y-2">
+                    {getAvailableSizes().map((size) => (
+                      <label key={size} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={articleForm.sizes.includes(size)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setArticleForm({...articleForm, sizes: [...articleForm.sizes, size]});
+                            } else {
+                              setArticleForm({...articleForm, sizes: articleForm.sizes.filter(s => s !== size)});
+                            }
+                          }}
+                          className="rounded border-slate-300"
+                        />
+                        <span className="text-sm">{size}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
@@ -1043,51 +846,6 @@ export default function PeticionesAdmin() {
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t('enterCategoryOrder') || 'Ingresa el orden de visualización'}
                   />
-                </div>
-
-                {/* Configuration Options */}
-                <div className="border-t pt-4">
-                  <p className="text-sm font-medium text-slate-700 mb-3">
-                    {t('sectionConfiguration') || 'Configuración de Sección'}
-                  </p>
-                  <div className="space-y-3">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={categoryForm.has_sizes}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, has_sizes: e.target.checked })}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-700">
-                        {t('hasSizes') || 'Los artículos de esta sección tienen tallas'}
-                      </span>
-                    </label>
-                    
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={categoryForm.separate_age_groups}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, separate_age_groups: e.target.checked })}
-                        disabled={!categoryForm.has_sizes}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
-                      />
-                      <span className="text-sm text-slate-700">
-                        {t('separateAgeGroups') || 'Separar adultos de niños'}
-                      </span>
-                    </label>
-                    
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={categoryForm.separate_genders}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, separate_genders: e.target.checked })}
-                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-700">
-                        {t('separateGenders') || 'Separar hombres de mujeres'}
-                      </span>
-                    </label>
-                  </div>
                 </div>
 
                 {/* Preview */}
