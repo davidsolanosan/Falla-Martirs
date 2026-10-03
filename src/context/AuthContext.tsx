@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, Role } from '../lib/supabase';
+import { User } from '../lib/supabase';
+import { Role } from '../lib/permissions';
 import { generateInitialPassword, verifyPassword, hashPassword } from '../utils/authUtils';
 import { 
   generateResetToken, 
@@ -133,8 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     
     try {
-      console.log('Intentando login con email:', email);
-      
       // Obtener datos del usuario
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -153,27 +152,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // Generar contraseña esperada
         const expectedPassword = generateInitialPassword(userData.dni || '', userData.birth_year || '');
-        console.log('Contraseña esperada:', expectedPassword);
-        console.log('Contraseña introducida:', password);
         
         // Verificar si tiene password_hash (ya cambió contraseña)
         if (userData.password_hash) {
-          console.log('Usuario tiene password_hash, verificando con bcrypt...');
           // Usar contraseña hasheada
           const isValidPassword = await verifyPassword(password, userData.password_hash);
           if (!isValidPassword) {
-            console.error('Contraseña hasheada incorrecta');
             return { success: false, error: 'Contraseña incorrecta' };
           }
-          console.log('✅ Contraseña hasheada verificada');
         } else {
-          console.log('Usuario sin password_hash, usando contraseña inicial...');
           // Usar contraseña inicial (DNI + año)
           if (password !== expectedPassword) {
-            console.error('Contraseña inicial incorrecta');
             return { success: false, error: 'Contraseña incorrecta. Use: DNI + año de nacimiento' };
           }
-          console.log('✅ Contraseña inicial verificada');
         }
       }
 
@@ -194,9 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(authUser);
 
-      console.log('✅ Login exitoso:', userData.email);
-      console.log('¿Es primer login?', userData.first_login);
-      
       return { 
         success: true, 
         user: authUser,

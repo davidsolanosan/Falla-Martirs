@@ -1,4 +1,4 @@
-import { verifyPassword } from './lib/auth';
+import { verifyPassword } from '../src/lib/auth';
 
 // Test para verificar si el hashing funciona correctamente
 async function testPasswordVerification() {

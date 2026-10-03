@@ -1,26 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { useTranslation } from '../../lib/i18n';
-import { Calendar, Clock, Settings, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, Save, RotateCcw } from 'lucide-react';
-
-interface CasalRental {
-  id: string;
-  user_id: string;
-  rental_date: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  price: number;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface CasalSettings {
-  id: string;
-  daily_price: number;
-  rules: string;
-  blocked_dates: string[];
-  updated_at: string;
-}
+import { Calendar, Clock, Settings, CheckCircle, XCircle, ChevronLeft, ChevronRight, Save, RotateCcw } from 'lucide-react';
 
 export default function CasalAdmin() {
   const { t } = useTranslation();
@@ -33,6 +14,7 @@ export default function CasalAdmin() {
     blocked_dates: [] as string[]
   });
   const [loading, setLoading] = useState(false);
+  const [savingBlocked, setSavingBlocked] = useState(false);
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
 
@@ -53,8 +35,37 @@ export default function CasalAdmin() {
   }, [casalSettings]);
 
   const handleApprove = async (rentalId: string) => {
+    setError('');
+    setSuccess('');
     try {
+      const rental = casalRentals?.find(r => r.id === rentalId);
       await updateCasalRental(rentalId, { status: 'approved' });
+
+      // Rechazar automáticamente otras solicitudes pendientes para la misma fecha
+      if (rental) {
+        const conflicts = (casalRentals || []).filter(
+          r => r.id !== rentalId && r.rental_date === rental.rental_date && r.status === 'pending'
+        );
+        for (const conflict of conflicts) {
+          await updateCasalRental(conflict.id, { status: 'rejected' });
+        }
+      }
+
+      setSuccess(t('rentalStatusUpdated'));
+      refreshCasalRentals();
+    } catch (err: any) {
+      setError(err.message || t('errorUpdatingRental'));
+    }
+  };
+
+  const handleCancelRental = async (rentalId: string) => {
+    if (!confirm(t('confirmCancel'))) {
+      return;
+    }
+    setError('');
+    setSuccess('');
+    try {
+      await updateCasalRental(rentalId, { status: 'cancelled' });
       setSuccess(t('rentalStatusUpdated'));
       refreshCasalRentals();
     } catch (err: any) {
@@ -102,13 +113,36 @@ export default function CasalAdmin() {
     }
   };
 
-  const toggleBlockedDate = (date: string) => {
-    setSettingsForm(prev => ({
-      ...prev,
-      blocked_dates: prev.blocked_dates.includes(date)
-        ? prev.blocked_dates.filter(d => d !== date)
-        : [...prev.blocked_dates, date]
-    }));
+  const toggleBlockedDate = async (date: string) => {
+    const settings = casalSettings?.[0];
+    if (!settings || savingBlocked) return;
+
+    // No permitir bloquear una fecha que ya tiene un alquiler aprobado
+    const hasApproved = casalRentals?.some(r => r.rental_date === date && r.status === 'approved');
+    if (hasApproved) {
+      setError(t('cannotBlockRentedDate'));
+      return;
+    }
+
+    const previousDates = settingsForm.blocked_dates;
+    const newBlockedDates = previousDates.includes(date)
+      ? previousDates.filter(d => d !== date)
+      : [...previousDates, date];
+
+    // Actualización optimista + guardado inmediato en BD
+    setSettingsForm(prev => ({ ...prev, blocked_dates: newBlockedDates }));
+    setSavingBlocked(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateCasalSettings(settings.id, { blocked_dates: newBlockedDates });
+    } catch (err: any) {
+      setSettingsForm(prev => ({ ...prev, blocked_dates: previousDates }));
+      setError(err.message || t('errorUpdatingSettings'));
+    } finally {
+      setSavingBlocked(false);
+    }
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -291,7 +325,7 @@ export default function CasalAdmin() {
               })}
             </div>
 
-            <div className="mt-6 flex space-x-4 text-sm">
+            <div className="mt-6 flex items-center space-x-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-100 border border-red-300 rounded"></div>
                 <span className="text-slate-600">{t('blocked')}</span>
@@ -304,6 +338,9 @@ export default function CasalAdmin() {
                 <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
                 <span className="text-slate-600">{t('pending')}</span>
               </div>
+              {savingBlocked && (
+                <span className="ml-auto text-blue-600 text-xs">{t('saving')}</span>
+              )}
             </div>
 
             <p className="mt-4 text-sm text-slate-600">{t('blockedDatesHelp')}</p>
@@ -384,9 +421,18 @@ export default function CasalAdmin() {
                               <p className="text-sm text-slate-600 mt-1">{t('notes')}: {rental.notes}</p>
                             )}
                           </div>
-                          <span className="px-2 py-1 bg-green-600 text-white rounded-full text-xs">
-                            {t('approved')}
-                          </span>
+                          <div className="flex flex-col items-end space-y-2">
+                            <span className="px-2 py-1 bg-green-600 text-white rounded-full text-xs">
+                              {t('approved')}
+                            </span>
+                            <button
+                              onClick={() => handleCancelRental(rental.id)}
+                              className="text-red-600 hover:text-red-700 text-xs flex items-center gap-1"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              {t('cancel')}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

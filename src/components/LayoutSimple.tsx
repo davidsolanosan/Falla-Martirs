@@ -68,10 +68,16 @@ const getNavItems = (role: string | undefined, t: any) => {
     items.push({ 
       name: t('navPetitions') || 'Peticiones', 
       path: '/peticiones', 
-      icon: Package,
-      subItems: [
-        { name: t('navCasal') || 'Alquiler Casal', path: '/casal', icon: Home }
-      ]
+      icon: Package 
+    });
+  }
+  
+  // Alquiler del Casal (visual para todos)
+  if (hasPermission(role, 'dashboard')) {
+    items.push({ 
+      name: t('navCasal') || 'Alquiler Casal', 
+      path: '/casal', 
+      icon: Home 
     });
   }
   
@@ -118,13 +124,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   
   const navItems = getNavItems(user?.role || 'user', t);
-  
-  // Debug para ver qué está pasando
-  console.log('🔍 LayoutSimple - User:', user);
-  console.log('🔍 LayoutSimple - Role:', user?.role);
-  console.log('🔍 LayoutSimple - NavItems:', navItems);
-  console.log('🔍 LayoutSimple - hasPermission censo:', hasPermission(user?.role, 'censo'));
-  console.log('🔍 LayoutSimple - hasPermission configuracion:', hasPermission(user?.role, 'configuracion'));
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans">

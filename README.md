@@ -1,24 +1,40 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Portal Falla Màrtirs
 
-# Run and deploy your AI Studio app
+Aplicación web de gestión interna para la comisión fallera Falla Màrtirs.
+Permite a los falleros consultar noticias, eventos, cuotas, lotería, peticiones
+y solicitar el alquiler del Casal; y a la junta administrar censo, familias,
+pagos y contenidos.
 
-This contains everything you need to run your app locally.
+## Stack
 
-View your app in AI Studio: https://ai.studio/apps/e63ab0a7-0cec-434d-a450-96406cb23859
+- **Frontend**: Vite + React 19 + TypeScript, Tailwind CSS 4, React Router 7
+- **Backend**: Supabase (PostgreSQL) — acceso directo desde el cliente
+- **i18n**: Castellano y Valencià (`src/lib/i18n.tsx`)
+- **Deploy**: Vercel
 
-## Run Locally
+## Ejecutar en local
 
-**Prerequisites:**  Node.js
+**Requisito:** Node.js
 
+```bash
+npm install
+npm run dev        # http://localhost:3000
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-<<<<<<< HEAD
-PRUEBA 3
-=======
->>>>>>> f3e9ecc (🚀 Inicialización Falla Martirs Nova con Master Admin y Sistema Completo)
+Otros comandos: `npm run build`, `npm run preview`, `npm run lint` (tsc).
+
+## Acceso
+
+- Login con email + contraseña. La contraseña inicial de cada fallero es
+  `DNI + año de nacimiento` (p. ej. `12345678Z1980`); en el primer acceso se
+  solicita cambiarla.
+- Roles: `user`, `admin`, `master_admin`.
+
+## Estructura
+
+- `src/pages/` — vistas de usuario; `src/pages/administracion/` — panel de gestión
+- `src/lib/SupabaseContext.tsx` — capa de datos (CRUD sobre Supabase)
+- `src/context/AuthContext.tsx` — autenticación propia sobre la tabla `users`
+- `sql/` — scripts SQL del esquema y migraciones aplicadas
+- `scripts/` — utilidades puntuales (generación de lotería, datos de prueba)
+- `database/` — histórico de migraciones de autenticación

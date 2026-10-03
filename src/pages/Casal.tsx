@@ -4,29 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../lib/i18n';
 import { Calendar, Clock, Info, X, CheckCircle, XCircle } from 'lucide-react';
 
-interface CasalRental {
-  id: string;
-  user_id: string;
-  rental_date: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  price: number;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface CasalSettings {
-  id: string;
-  daily_price: number;
-  rules: string;
-  blocked_dates: string[];
-  updated_at: string;
-}
-
 export default function Casal() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { casalRentals, casalSettings, refreshCasalRentals, refreshCasalSettings, createCasalRental } = useSupabase();
+  const { casalRentals, casalSettings, refreshCasalRentals, refreshCasalSettings, createCasalRental, updateCasalRental } = useSupabase();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [showRules, setShowRules] = useState(false);
@@ -86,9 +67,11 @@ export default function Casal() {
       return;
     }
 
+    setError('');
+    setSuccess('');
+
     try {
-      // Aquí necesitaríamos implementar la función de cancelación
-      // Por ahora, solo mostramos un mensaje
+      await updateCasalRental(rentalId, { status: 'cancelled' });
       setSuccess(t('requestCancelled'));
       refreshCasalRentals();
     } catch (err: any) {
@@ -104,8 +87,19 @@ export default function Casal() {
     return settings.blocked_dates.includes(date);
   };
 
-  const isDateTaken = (date: string) => {
-    return myRentals.some(r => r.rental_date === date && r.status !== 'cancelled');
+  // Devuelve la solicitud activa (pendiente o aprobada) de CUALQUIER usuario para una fecha
+  const getActiveRentalForDate = (date: string) => {
+    return casalRentals?.find(
+      r => r.rental_date === date && (r.status === 'pending' || r.status === 'approved')
+    );
+  };
+
+  const getDateWarning = (date: string): string | null => {
+    const rental = getActiveRentalForDate(date);
+    if (!rental) return null;
+    if (rental.user_id === user?.id) return t('dateTaken');
+    if (rental.status === 'approved') return t('dateAlreadyRented');
+    return t('datePendingOther');
   };
 
   const getStatusColor = (status: string) => {
@@ -170,8 +164,8 @@ export default function Casal() {
                 {selectedDate && isDateBlocked(selectedDate) && (
                   <p className="text-red-600 text-sm mt-1">{t('dateBlocked')}</p>
                 )}
-                {selectedDate && isDateTaken(selectedDate) && (
-                  <p className="text-yellow-600 text-sm mt-1">{t('dateTaken')}</p>
+                {selectedDate && getDateWarning(selectedDate) && (
+                  <p className="text-yellow-600 text-sm mt-1">{getDateWarning(selectedDate)}</p>
                 )}
               </div>
 
@@ -198,7 +192,7 @@ export default function Casal() {
 
               <button
                 type="submit"
-                disabled={loading || !selectedDate || isDateBlocked(selectedDate) || isDateTaken(selectedDate)}
+                disabled={loading || !selectedDate || isDateBlocked(selectedDate) || !!getDateWarning(selectedDate)}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? t('sending') : t('requestRental')}

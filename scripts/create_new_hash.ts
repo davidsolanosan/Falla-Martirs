@@ -1,4 +1,4 @@
-import { hashPassword } from './lib/auth';
+import { hashPassword } from '../src/lib/auth';
 
 // Crear un hash nuevo para la contraseña SUPER123A1980
 async function createNewHash() {
@@ -11,7 +11,7 @@ async function createNewHash() {
     console.log('Longitud del hash:', newHash.length);
     
     // Actualizar el usuario con el nuevo hash
-    const { supabase } = await import('./lib/supabase');
+    const { supabase } = await import('../src/lib/supabase');
     
     const { error } = await supabase.default
       .from('users')
