@@ -81,11 +81,11 @@ const getNavItems = (role: string | undefined, t: any) => {
     });
   }
   
-  // Configuración (para todos)
-  if (hasPermission(role, 'configuracion')) {
+  // Configuración de usuario (solo falleros; los admins la tienen en el submenú de Administración)
+  if (role === 'user') {
     items.push({ 
       name: t('navSettings'), 
-      path: '/administracion/configuracion', 
+      path: '/configuracion', 
       icon: Settings 
     });
   }
