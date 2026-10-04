@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { SupabaseProvider } from './lib/SupabaseContext';
 import { LanguageProvider } from './lib/i18n';
@@ -34,9 +35,11 @@ import ActualizarNoticiasEventos from './pages/administracion/ActualizarNoticias
 import ChangePassword from './pages/ChangePassword';
 import ResetPassword from './pages/ResetPassword';
 import Peticiones from './pages/Peticiones';
+import { AppFeedbackHost } from './components/ui/AppFeedback';
+import SectionGate from './components/SectionGate';
 
 // Componente para rutas protegidas
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
   
   if (loading) {
@@ -61,6 +64,7 @@ function AppWithAuth() {
       <SupabaseProvider>
         <AuthProvider>
           <Router>
+            <AppFeedbackHost />
             <Routes>
               {/* Rutas públicas */}
               <Route path="/login" element={<LoginScreen />} />
@@ -79,7 +83,9 @@ function AppWithAuth() {
               <Route path="/noticias" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Noticias />
+                    <SectionGate section="noticias">
+                      <Noticias />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -87,7 +93,9 @@ function AppWithAuth() {
               <Route path="/cuotas" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Cuotas />
+                    <SectionGate section="cuotas">
+                      <Cuotas />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -95,7 +103,9 @@ function AppWithAuth() {
               <Route path="/loterias" element={
                 <ProtectedRoute>
                   <Layout>
-                    <LoteriasUser />
+                    <SectionGate section="loterias">
+                      <LoteriasUser />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -106,7 +116,9 @@ function AppWithAuth() {
               <Route path="/eventos" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Eventos />
+                    <SectionGate section="eventos">
+                      <Eventos />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -114,7 +126,9 @@ function AppWithAuth() {
               <Route path="/documentos" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Documentos />
+                    <SectionGate section="documentos">
+                      <Documentos />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -122,7 +136,9 @@ function AppWithAuth() {
               <Route path="/peticiones" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Peticiones />
+                    <SectionGate section="peticiones">
+                      <Peticiones />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />
@@ -130,7 +146,9 @@ function AppWithAuth() {
               <Route path="/casal" element={
                 <ProtectedRoute>
                   <Layout>
-                    <Casal />
+                    <SectionGate section="casal">
+                      <Casal />
+                    </SectionGate>
                   </Layout>
                 </ProtectedRoute>
               } />

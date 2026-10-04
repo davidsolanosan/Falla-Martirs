@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { Package, Plus, Edit2, Trash2, Eye, X, Check, AlertCircle, Upload, Image as ImageIcon, Shirt, Award, Users, Star, Heart, Gem, FileText, Calendar, Music, Camera, Home } from 'lucide-react';
+import { appConfirm } from '../../components/ui/AppFeedback';
 
 export default function PeticionesAdmin() {
   const { t } = useTranslation();
-  const { petitionArticles, petitionCategories, petitions, createPetitionArticle, updatePetitionArticle, deletePetitionArticle, createPetitionCategory, updatePetitionCategory, deletePetitionCategory, refreshPetitionCategories, updatePetition } = useSupabase();
+  const { petitionArticles, petitionCategories, petitions, createPetitionArticle, updatePetitionArticle, deletePetitionArticle, createPetitionCategory, updatePetitionCategory, deletePetitionCategory, refreshPetitionCategories, refreshPetitionArticles, updatePetition } = useSupabase();
   
   const [activeTab, setActiveTab] = useState<'categories' | 'articles' | 'petitions'>('categories');
   const [showArticleForm, setShowArticleForm] = useState(false);
@@ -120,7 +121,7 @@ export default function PeticionesAdmin() {
   };
 
   const handleDeleteArticle = async (id) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este artículo?')) {
+    if (await appConfirm('¿Estás seguro de que quieres eliminar este artículo?')) {
       try {
         await deletePetitionArticle(id);
       } catch (error) {
@@ -175,7 +176,7 @@ export default function PeticionesAdmin() {
   };
 
   const handleDeleteCategory = async (id) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta sección? Los artículos asociados perderán esta sección.')) {
+    if (await appConfirm('¿Estás seguro de que quieres eliminar esta sección? Los artículos asociados perderán esta sección.')) {
       try {
         await deletePetitionCategory(id);
         // Refrescar la lista de categorías
@@ -324,7 +325,7 @@ export default function PeticionesAdmin() {
                 </span>
                 <button
                   onClick={async () => {
-                    if (confirm(`¿Marcar todos los artículos como disponibles? (${unavailableArticles} artículos)`)) {
+                    if (await appConfirm(`¿Marcar todos los artículos como disponibles? (${unavailableArticles} artículos)`)) {
                       try {
                         const unavailableArticlesList = petitionArticles?.filter(a => !a.available) || [];
                         for (const article of unavailableArticlesList) {
@@ -343,7 +344,7 @@ export default function PeticionesAdmin() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (confirm(`¿Marcar todos los artículos como no disponibles? (${availableArticles} artículos)`)) {
+                    if (await appConfirm(`¿Marcar todos los artículos como no disponibles? (${availableArticles} artículos)`)) {
                       try {
                         const availableArticlesList = petitionArticles?.filter(a => a.available) || [];
                         for (const article of availableArticlesList) {

@@ -198,10 +198,12 @@ export interface EventRegistration {
   event_id: string;
   user_id: string;
   family_id: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  total_amount: number;
-  created_at: string;
-  updated_at: string;
+  category_id: string;
+  includes_meal: boolean;
+  total_price: number;
+  registered_by: string;
+  registered_at: string;
+  event_family_id?: string | null;
 }
 
 // Peticiones
@@ -299,4 +301,10 @@ export interface CasalSettings {
   rules: string;
   blocked_dates: string[];
   updated_at: string;
+}
+
+export interface SectionStatus {
+  section: string;
+  enabled: boolean;
+  updated_at?: string;
 }

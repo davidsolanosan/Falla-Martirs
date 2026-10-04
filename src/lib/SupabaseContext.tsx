@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings, SectionStatus } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -23,6 +23,7 @@ interface SupabaseContextType {
   familyRepresentatives: {family_id: string, user_id: string}[];
   casalRentals: CasalRental[];
   casalSettings: CasalSettings[];
+  sectionStatus: SectionStatus[];
   loading: boolean;
   error: string | null;
   
@@ -107,6 +108,8 @@ interface SupabaseContextType {
   refreshFamilyRepresentatives: () => Promise<void>;
   refreshCasalRentals: () => Promise<void>;
   refreshCasalSettings: () => Promise<void>;
+  refreshSectionStatus: () => Promise<void>;
+  updateSectionStatus: (section: string, enabled: boolean) => Promise<void>;
   
   // Casal functions
   createCasalRental: (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => Promise<CasalRental>;
@@ -143,6 +146,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [familyRepresentatives, setFamilyRepresentatives] = useState<{family_id: string, user_id: string}[]>([]);
   const [casalRentals, setCasalRentals] = useState<CasalRental[]>([]);
   const [casalSettings, setCasalSettings] = useState<CasalSettings[]>([]);
+  const [sectionStatus, setSectionStatus] = useState<SectionStatus[]>([]);
   
   // Banderas para evitar cargas múltiples
   const [isLoadingLotteryDates, setIsLoadingLotteryDates] = useState(false);
@@ -1658,6 +1662,30 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshSectionStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('section_status')
+        .select('*');
+
+      if (error) throw error;
+      setSectionStatus(data || []);
+    } catch (err) {
+      console.error('Error loading section status:', err);
+      // Si la tabla no existe, todas las secciones se consideran activas
+      setSectionStatus([]);
+    }
+  };
+
+  const updateSectionStatus = async (section: string, enabled: boolean) => {
+    const { error } = await supabase
+      .from('section_status')
+      .upsert({ section, enabled, updated_at: new Date().toISOString() }, { onConflict: 'section' });
+
+    if (error) throw error;
+    await refreshSectionStatus();
+  };
+
   const createCasalRental = async (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
@@ -1764,6 +1792,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshFamilyRepresentatives(), // AÑADIDO: cargar representantes de familias
           refreshCasalRentals(), // AÑADIDO: cargar alquileres de casal
           refreshCasalSettings(), // AÑADIDO: cargar configuración de casal
+          refreshSectionStatus(), // AÑADIDO: cargar estado de secciones
         ]);
         
         // Check current auth state - DESHABILITADO para evitar conflictos con AuthContext
@@ -1843,6 +1872,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     familyRepresentatives,
     casalRentals,
     casalSettings,
+    sectionStatus,
     loading,
     error,
     signIn,
@@ -1915,6 +1945,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshFamilyRepresentatives,
     refreshCasalRentals,
     refreshCasalSettings,
+    refreshSectionStatus,
+    updateSectionStatus,
     // Casal functions
     createCasalRental,
     updateCasalRental,

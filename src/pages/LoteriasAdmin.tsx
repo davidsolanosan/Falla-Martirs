@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { LotteryDate, LotteryTicket, supabase } from '../lib/supabase';
+import { appConfirm } from '../components/ui/AppFeedback';
 import { 
   PlusIcon, 
   PencilIcon, 
@@ -149,7 +150,7 @@ export default function LoteriasAdmin() {
 
   // Delete lottery
   const deleteLottery = async (lottery: LotteryDate) => {
-    if (!confirm(`¿Estás seguro de eliminar el sorteo "${lottery.name}"?`)) return;
+    if (!(await appConfirm(`¿Estás seguro de eliminar el sorteo "${lottery.name}"?`))) return;
     
     try {
       console.log('🗑️ Deleting lottery:', { id: lottery.id, name: lottery.name, date: lottery.date });

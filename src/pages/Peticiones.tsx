@@ -4,6 +4,7 @@ import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { Package, ShoppingCart, Plus, Minus, X, Search, Filter, User, History, Image as ImageIcon, Shirt, Award, Users, Package as PackageIcon } from 'lucide-react';
+import { appConfirm } from '../components/ui/AppFeedback';
 
 export default function Peticiones() {
   const { t } = useTranslation();
@@ -78,13 +79,12 @@ export default function Peticiones() {
     return sizeTranslations[size] || size;
   };
 
-  const addToCart = (article, size, quantity = 1) => {
+  const addToCart = async (article, size, quantity = 1) => {
     // Confirmación antes de añadir al carrito
     const translatedSize = getTranslatedSize(size);
     const confirmMessage = `${t('confirmAddToCart') || '¿Añadir'} ${article.name} (${translatedSize}) ${t('toCart') || 'al carrito'}?`;
-    console.log('Confirm message:', confirmMessage); // Debug
-    
-    if (window.confirm(confirmMessage)) {
+
+    if (await appConfirm(confirmMessage)) {
       const existingItem = cart.find(item => 
         item.article_id === article.id && item.size === size
       );

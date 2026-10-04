@@ -1,11 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
-import { Settings, Users, Ticket, Plus, Edit2, Trash2, Save, X, DollarSign } from 'lucide-react';
+import { Settings, Users, Ticket, Plus, Edit2, Trash2, Save, X, DollarSign, LayoutGrid } from 'lucide-react';
+import { appConfirm } from '../../components/ui/AppFeedback';
+
+const APP_SECTIONS = [
+  { key: 'noticias', nameKey: 'navNews' },
+  { key: 'eventos', nameKey: 'navEvents' },
+  { key: 'cuotas', nameKey: 'navQuotas' },
+  { key: 'loterias', nameKey: 'navLottery' },
+  { key: 'documentos', nameKey: 'navDocuments' },
+  { key: 'peticiones', nameKey: 'navPetitions' },
+  { key: 'casal', nameKey: 'navCasal' },
+];
 
 export default function ConfiguracionAdmin() {
   const { t } = useTranslation();
-  const { categories, lotteryDates, createCategory, updateCategory, deleteCategory, updateLotteryDate, refreshCategories, refreshLotteryDates } = useSupabase();
+  const { categories, lotteryDates, createCategory, updateCategory, deleteCategory, updateLotteryDate, refreshCategories, refreshLotteryDates, sectionStatus, updateSectionStatus } = useSupabase();
   
   const [activeTab, setActiveTab] = useState('categories');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -51,7 +62,7 @@ export default function ConfiguracionAdmin() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (confirm(t('confirmDeleteCategory'))) {
+    if (await appConfirm(t('confirmDeleteCategory'))) {
       try {
         await deleteCategory(id);
         await refreshCategories();
@@ -71,6 +82,20 @@ export default function ConfiguracionAdmin() {
       max_age: category.max_age
     });
     setShowCategoryModal(true);
+  };
+
+  const isSectionEnabled = (key: string) => {
+    const row = sectionStatus.find(s => s.section === key);
+    return row ? row.enabled : true;
+  };
+
+  const handleToggleSection = async (key: string) => {
+    try {
+      await updateSectionStatus(key, !isSectionEnabled(key));
+    } catch (error) {
+      console.error('Error updating section:', error);
+      alert(t('errorUpdatingSection'));
+    }
   };
 
   const handleSaveLotteryBenefits = async () => {
@@ -161,6 +186,17 @@ export default function ConfiguracionAdmin() {
             >
               <Ticket className="w-5 h-5 mr-2" />
               {t('lotteryBenefitsTab')}
+            </button>
+            <button
+              onClick={() => setActiveTab('sections')}
+              className={`flex items-center px-6 py-4 font-medium transition-colors ${
+                activeTab === 'sections'
+                  ? 'text-[rgb(48,80,105)] border-b-2 border-[rgb(48,80,105)]'
+                  : 'text-slate-600 hover:text-slate-800'
+              }`}
+            >
+              <LayoutGrid className="w-5 h-5 mr-2" />
+              {t('sectionsTab')}
             </button>
           </div>
         </div>
@@ -317,6 +353,51 @@ export default function ConfiguracionAdmin() {
                   €{getCurrentBenefits().horta_benefit.toFixed(2)}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sections Tab */}
+        {activeTab === 'sections' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                {t('sectionsTab')}
+              </h2>
+              <p className="text-sm text-slate-600 mt-1">
+                {t('sectionsTabDescription')}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {APP_SECTIONS.map(({ key, nameKey }) => {
+                const enabled = isSectionEnabled(key);
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800">{t(nameKey)}</p>
+                      <p className="text-sm text-slate-500">
+                        {enabled ? t('visibleToFalleros') : t('hiddenFromFalleros')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleSection(key)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                        enabled ? 'bg-[rgb(48,80,105)]' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                          enabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

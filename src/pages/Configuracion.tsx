@@ -131,26 +131,6 @@ export default function Configuracion() {
         </h3>
         <div className="space-y-3">
           <button
-            onClick={() => handleLanguageChange('es')}
-            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
-              language === 'es'
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-slate-200 hover:border-slate-300'
-            }`}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 mr-3 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-sm">
-                ES
-              </div>
-              <div className="text-left">
-                <p className="font-medium text-slate-800">Español</p>
-                <p className="text-sm text-slate-500">Castellano</p>
-              </div>
-            </div>
-            {language === 'es' && <Check className="w-5 h-5 text-indigo-600" />}
-          </button>
-
-          <button
             onClick={() => handleLanguageChange('va')}
             className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
               language === 'va'
@@ -168,6 +148,26 @@ export default function Configuracion() {
               </div>
             </div>
             {language === 'va' && <Check className="w-5 h-5 text-indigo-600" />}
+          </button>
+
+          <button
+            onClick={() => handleLanguageChange('es')}
+            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
+              language === 'es'
+                ? 'border-indigo-500 bg-indigo-50'
+                : 'border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center">
+              <div className="w-8 h-8 mr-3 rounded-lg bg-red-600 flex items-center justify-center text-white font-bold text-sm">
+                ES
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-slate-800">Español</p>
+                <p className="text-sm text-slate-500">Castellano</p>
+              </div>
+            </div>
+            {language === 'es' && <Check className="w-5 h-5 text-indigo-600" />}
           </button>
         </div>
       </div>

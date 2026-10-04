@@ -58,7 +58,7 @@ export default function Inici() {
       color: 'from-cyan-500 to-cyan-600',
       bgColor: 'bg-cyan-50',
       iconColor: 'text-cyan-600',
-      route: '/documents'
+      route: '/documentos'
     },
     {
       id: 'galeria',
@@ -67,7 +67,7 @@ export default function Inici() {
       color: 'from-pink-500 to-pink-600',
       bgColor: 'bg-pink-50',
       iconColor: 'text-pink-600',
-      route: '/galeria'
+      route: '/documentos'
     },
     {
       id: 'configuracio',
@@ -76,7 +76,7 @@ export default function Inici() {
       color: 'from-slate-500 to-slate-600',
       bgColor: 'bg-slate-50',
       iconColor: 'text-slate-600',
-      route: '/configuracio'
+      route: '/configuracion'
     }
   ];
 
@@ -153,7 +153,7 @@ export default function Inici() {
 
       {/* Tarjeta de Configuración - Ancho completo */}
       <button
-        onClick={() => handleNavigation('/configuracio')}
+        onClick={() => handleNavigation('/configuracion')}
         className="w-full group relative bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
       >
         <div className="flex items-center justify-between">

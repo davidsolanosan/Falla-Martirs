@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { X, Users, Crown, UserPlus, Trash2 } from 'lucide-react';
+import { appConfirm } from '../ui/AppFeedback';
 
 interface User {
   id: string;
@@ -106,7 +107,7 @@ function FamilyManagementModal({
   };
 
   const handleDeleteFamily = async () => {
-    if (!family || !confirm(`¿Estás seguro de eliminar la familia "${family.name}"?`)) return;
+    if (!family || !(await appConfirm(`¿Estás seguro de eliminar la familia "${family.name}"?`))) return;
     
     try {
       await onDelete(family.id);

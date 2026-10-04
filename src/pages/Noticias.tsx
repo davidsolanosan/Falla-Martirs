@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../lib/i18n';
-import { useSupabase } from '../lib/SupabaseContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase, News, NewsRead } from '../lib/supabase';
 import { FileText, Calendar, User, Check, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 
 export default function Noticias() {
   const { t } = useTranslation();
-  const { user } = useSupabase();
+  const { user } = useAuth();
   const [news, setNews] = useState<News[]>([]);
   const [readNews, setReadNews] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export default function Noticias() {
     if (!readNews.includes(newsId)) {
       // Verificar si hay usuario autenticado
       if (!user?.id) {
-        alert('Debes iniciar sesión para marcar noticias como leídas');
+        alert(t('loginToMarkRead'));
         return;
       }
 
@@ -108,7 +108,7 @@ export default function Noticias() {
 
         if (error) {
           console.error('Error marking news as read:', error);
-          alert('Error al marcar la noticia como leída');
+          alert(t('errorMarkingRead'));
           return;
         }
 
@@ -116,7 +116,7 @@ export default function Noticias() {
         alert(t('newsMarkedAsRead'));
       } catch (error) {
         console.error('Error:', error);
-        alert('Error al marcar la noticia como leída');
+        alert(t('errorMarkingRead'));
       }
     }
   };

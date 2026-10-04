@@ -3,6 +3,7 @@ import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from '../lib/i18n';
 import { Calendar, Clock, Info, X, CheckCircle, XCircle } from 'lucide-react';
+import { appConfirm } from '../components/ui/AppFeedback';
 
 export default function Casal() {
   const { t } = useTranslation();
@@ -63,7 +64,7 @@ export default function Casal() {
   };
 
   const handleCancel = async (rentalId: string) => {
-    if (!confirm(t('confirmCancel'))) {
+    if (!(await appConfirm(t('confirmCancel')))) {
       return;
     }
 

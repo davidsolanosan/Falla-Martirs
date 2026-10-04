@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { useTranslation } from '../../lib/i18n';
 import { Calendar, Clock, Settings, CheckCircle, XCircle, ChevronLeft, ChevronRight, Save, RotateCcw } from 'lucide-react';
+import { appConfirm } from '../../components/ui/AppFeedback';
 
 export default function CasalAdmin() {
   const { t } = useTranslation();
@@ -59,7 +60,7 @@ export default function CasalAdmin() {
   };
 
   const handleCancelRental = async (rentalId: string) => {
-    if (!confirm(t('confirmCancel'))) {
+    if (!(await appConfirm(t('confirmCancel')))) {
       return;
     }
     setError('');

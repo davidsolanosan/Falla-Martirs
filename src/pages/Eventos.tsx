@@ -13,6 +13,7 @@ export default function Eventos() {
   const navigate = useNavigate();
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+  const [showPastEvents, setShowPastEvents] = useState(false);
   const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
 
   const getEventRegistrations = (eventId: string) => {
@@ -63,12 +64,12 @@ export default function Eventos() {
         navigate(newsUrl);
       } catch (error) {
         console.error('🔍 Error abriendo noticia:', error);
-        alert('Error al abrir la noticia. Por favor, inténtalo de nuevo.');
+        alert(t('errorOpeningNews'));
       }
     } else {
       console.log('🔍 No hay news_id para el evento');
       // Mostrar mensaje si no hay noticia
-      alert('Este evento aún no tiene una noticia asociada.');
+      alert(t('noNewsAssociated'));
     }
   };
 
@@ -125,7 +126,7 @@ export default function Eventos() {
         
         if (!categoryId) {
           console.error('❌ El miembro no tiene categoría asignada:', memberId);
-          alert('El miembro no tiene categoría asignada. Por favor, contacta con el administrador.');
+          alert(t('memberNoCategory'));
           continue;
         }
         
@@ -135,7 +136,7 @@ export default function Eventos() {
         
         if (eventPricesForEvent.length === 0) {
           console.error('❌ No hay precios configurados para este evento');
-          alert('No hay precios configurados para este evento. Por favor, contacta con el administrador.');
+          alert(t('noEventPrices'));
           continue;
         }
         
@@ -149,7 +150,7 @@ export default function Eventos() {
           const defaultCategory = eventPrices[0]?.category_id;
           if (!defaultCategory) {
             console.error('❌ No hay categorías disponibles para este evento');
-            alert('No hay categorías configuradas para este evento. Por favor, configura los precios primero.');
+            alert(t('noEventCategories'));
             continue;
           }
           
@@ -563,6 +564,17 @@ export default function Eventos() {
     );
   };
 
+  // Separar eventos próximos de finalizados (comparando solo la fecha)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isPastEvent = (event: any) => new Date(event.event_date) < today;
+  const upcomingEvents = events
+    .filter((e: any) => !isPastEvent(e))
+    .sort((a: any, b: any) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+  const pastEvents = events
+    .filter(isPastEvent)
+    .sort((a: any, b: any) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -587,8 +599,12 @@ export default function Eventos() {
           </p>
         </div>
       ) : (
+        <>
+        {upcomingEvents.length === 0 && (
+          <p className="text-center text-slate-500 py-4">{t('noUpcomingEvents')}</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map(event => {
+          {[...upcomingEvents, ...(showPastEvents ? pastEvents : [])].map(event => {
           const date = new Date(event.event_date);
           return (
             <div key={event.id} className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
@@ -602,7 +618,7 @@ export default function Eventos() {
                     event.includes_meal 
                       ? 'bg-emerald-100 text-emerald-600' 
                       : 'bg-gray-100 text-gray-400'
-                  }`} title={event.includes_meal ? 'Con comida' : 'Sin comida'}>
+                  }`} title={event.includes_meal ? t('withFood') : t('withoutFood')}>
                     <img 
                       src="/icons/burger.ico" 
                       alt="Comida"
@@ -619,7 +635,7 @@ export default function Eventos() {
                   <h3 className="text-xl font-bold text-slate-800 flex-1">{event.title}</h3>
                   <div className="flex items-center text-sm text-slate-600 whitespace-nowrap">
                     <Users className="w-4 h-4 mr-1" />
-                    {getEventRegistrations(event.id).length} apuntados
+                    {getEventRegistrations(event.id).length} {t('attendees')}
                   </div>
                 </div>
                 <div 
@@ -670,7 +686,7 @@ export default function Eventos() {
                     <button 
                       onClick={() => openEventNews(event)}
                       className="text-sm font-medium px-3 py-1 rounded-xl bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors flex items-center"
-                      title="Ver información completa"
+                      title={t('viewFullInfo')}
                       type="button"
                     >
                       <Info className="w-4 h-4 mr-1" />
@@ -704,7 +720,24 @@ export default function Eventos() {
             </div>
           );
         })}
-      </div>
+        </div>
+
+        {pastEvents.length > 0 && (
+          <button
+            onClick={() => setShowPastEvents(!showPastEvents)}
+            className="w-full flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+              {t('pastEvents')} ({pastEvents.length})
+            </h2>
+            {showPastEvents ? (
+              <ChevronUp className="w-5 h-5 text-slate-600" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-600" />
+            )}
+          </button>
+        )}
+        </>
       )}
 
       {isRegistrationModalOpen && selectedEvent && (

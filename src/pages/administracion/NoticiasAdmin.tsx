@@ -4,6 +4,7 @@ import { useSupabase } from '../../lib/SupabaseContext';
 import { supabase, News } from '../../lib/supabase';
 import { Plus, Edit2, Trash2, FileText, Eye, EyeOff, Calendar, User, AlertCircle, CheckCircle } from 'lucide-react';
 import TextEditor from '../../components/editor/TextEditor';
+import { appConfirm } from '../../components/ui/AppFeedback';
 
 export default function NoticiasAdmin() {
   const { t } = useTranslation();
@@ -110,7 +111,7 @@ export default function NoticiasAdmin() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(t('confirmDeleteNews'))) {
+    if (await appConfirm(t('confirmDeleteNews'))) {
       try {
         const { error } = await supabase
           .from('news')
@@ -139,7 +140,7 @@ export default function NoticiasAdmin() {
       draft: ''
     };
     
-    if (newStatus !== 'draft' && !confirm(confirmMessages[newStatus])) {
+    if (newStatus !== 'draft' && !(await appConfirm(confirmMessages[newStatus]))) {
       return;
     }
     

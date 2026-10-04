@@ -4,6 +4,7 @@ import { useSupabase } from '../../lib/SupabaseContext';
 import { Calendar, Plus, Edit2, Trash2, Users, Eye, Euro, Clock, AlertCircle, CheckCircle, Download, Utensils } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import TextEditor from '../../components/editor/TextEditor';
+import { appConfirm } from '../../components/ui/AppFeedback';
 // Función para verificar si el plazo de inscripción ha finalizado
 const isRegistrationDeadlinePassed = (event) => {
   if (!event.registration_deadline) return false;
@@ -267,7 +268,7 @@ export default function EventosAdmin() {
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    if (confirm(t('confirmDeleteEvent'))) {
+    if (await appConfirm(t('confirmDeleteEvent'))) {
       try {
         await deleteEvent(eventId);
       } catch (error) {
