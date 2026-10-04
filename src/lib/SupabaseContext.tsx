@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings, SectionStatus } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, EventMealOption, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings, SectionStatus } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -24,6 +24,7 @@ interface SupabaseContextType {
   casalRentals: CasalRental[];
   casalSettings: CasalSettings[];
   sectionStatus: SectionStatus[];
+  eventMealOptions: EventMealOption[];
   loading: boolean;
   error: string | null;
   
@@ -60,11 +61,12 @@ interface SupabaseContextType {
   deleteLotteryPrize: (id: string) => Promise<void>;
   
   // Event CRUD functions
-  createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  createEvent: (event: Omit<Event, 'id' | 'created_at' | 'updated_at'>) => Promise<Event>;
   updateEvent: (id: string, event: Partial<Event>) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   createEventPrice: (price: Omit<EventPrice, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateEventPrice: (id: string, price: Partial<EventPrice>) => Promise<void>;
+  fetchEventPricesForEvent: (eventId: string) => Promise<EventPrice[]>;
   deleteEventPrice: (id: string) => Promise<void>;
   createEventRegistration: (registration: Omit<EventRegistration, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateEventRegistration: (id: string, registration: Partial<EventRegistration>) => Promise<void>;
@@ -110,6 +112,10 @@ interface SupabaseContextType {
   refreshCasalSettings: () => Promise<void>;
   refreshSectionStatus: () => Promise<void>;
   updateSectionStatus: (section: string, enabled: boolean) => Promise<void>;
+  refreshEventMealOptions: () => Promise<void>;
+  createEventMealOption: (option: Omit<EventMealOption, 'id' | 'created_at'>) => Promise<EventMealOption>;
+  updateEventMealOption: (id: string, option: Partial<EventMealOption>) => Promise<void>;
+  deleteEventMealOption: (id: string) => Promise<void>;
   
   // Casal functions
   createCasalRental: (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => Promise<CasalRental>;
@@ -147,6 +153,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [casalRentals, setCasalRentals] = useState<CasalRental[]>([]);
   const [casalSettings, setCasalSettings] = useState<CasalSettings[]>([]);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus[]>([]);
+  const [eventMealOptions, setEventMealOptions] = useState<EventMealOption[]>([]);
   
   // Banderas para evitar cargas múltiples
   const [isLoadingLotteryDates, setIsLoadingLotteryDates] = useState(false);
@@ -1033,6 +1040,16 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const fetchEventPricesForEvent = async (eventId: string): Promise<EventPrice[]> => {
+    const { data, error } = await supabase
+      .from('event_prices')
+      .select('*')
+      .eq('event_id', eventId);
+
+    if (error) throw error;
+    return data || [];
+  };
+
   const deleteEventPrice = async (id: string) => {
     try {
       const { error } = await supabase
@@ -1686,6 +1703,53 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     await refreshSectionStatus();
   };
 
+  const refreshEventMealOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_meal_options')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setEventMealOptions(data || []);
+    } catch (err) {
+      console.error('Error loading event meal options:', err);
+      setEventMealOptions([]);
+    }
+  };
+
+  const createEventMealOption = async (option: Omit<EventMealOption, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase
+      .from('event_meal_options')
+      .insert(option)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await refreshEventMealOptions();
+    return data;
+  };
+
+  const updateEventMealOption = async (id: string, option: Partial<EventMealOption>) => {
+    const { error } = await supabase
+      .from('event_meal_options')
+      .update(option)
+      .eq('id', id);
+
+    if (error) throw error;
+    await refreshEventMealOptions();
+  };
+
+  const deleteEventMealOption = async (id: string) => {
+    const { error } = await supabase
+      .from('event_meal_options')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    await refreshEventMealOptions();
+  };
+
   const createCasalRental = async (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
@@ -1793,6 +1857,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshCasalRentals(), // AÑADIDO: cargar alquileres de casal
           refreshCasalSettings(), // AÑADIDO: cargar configuración de casal
           refreshSectionStatus(), // AÑADIDO: cargar estado de secciones
+          refreshEventMealOptions(), // AÑADIDO: cargar opciones de menú de eventos
         ]);
         
         // Check current auth state - DESHABILITADO para evitar conflictos con AuthContext
@@ -1873,6 +1938,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     casalRentals,
     casalSettings,
     sectionStatus,
+    eventMealOptions,
     loading,
     error,
     signIn,
@@ -1908,6 +1974,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     deleteEvent,
     createEventPrice,
     updateEventPrice,
+    fetchEventPricesForEvent,
     deleteEventPrice,
     createEventRegistration,
     updateEventRegistration,
@@ -1947,6 +2014,10 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     refreshCasalSettings,
     refreshSectionStatus,
     updateSectionStatus,
+    refreshEventMealOptions,
+    createEventMealOption,
+    updateEventMealOption,
+    deleteEventMealOption,
     // Casal functions
     createCasalRental,
     updateCasalRental,

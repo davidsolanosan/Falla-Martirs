@@ -20,7 +20,7 @@ const isRegistrationDeadlinePassed = (event) => {
 
 export default function EventosAdmin() {
   const { t } = useTranslation();
-  const { events, eventPrices, eventRegistrations, families, users, categories, createEvent, updateEvent, deleteEvent, createEventPrice, updateEventPrice, deleteEventPrice, createEventRegistration, updateEventRegistration, deleteEventRegistration, createNews, updateNews } = useSupabase();
+  const { events, eventPrices, eventRegistrations, families, users, categories, createEvent, updateEvent, deleteEvent, createEventPrice, updateEventPrice, deleteEventPrice, createEventRegistration, updateEventRegistration, deleteEventRegistration, createNews, updateNews, eventMealOptions, createEventMealOption, updateEventMealOption, deleteEventMealOption, fetchEventPricesForEvent, refreshEventRegistrations } = useSupabase();
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
@@ -40,6 +40,8 @@ export default function EventosAdmin() {
     news_id: '' // Relación con noticia generada
   });
   const [priceForm, setPriceForm] = useState<{ [key: string]: number }>({});
+  const [originalPriceForm, setOriginalPriceForm] = useState<{ [key: string]: number }>({});
+  const [mealOptions, setMealOptions] = useState<{ id?: string; name: string; extra_cost: number }[]>([]);
 
   useEffect(() => {
     setLoading(false);
@@ -202,19 +204,44 @@ export default function EventosAdmin() {
         }
       }
       
-      // Guardar precios por categoría
-      for (const [categoryId, price] of Object.entries(priceForm)) {
-        if (price > 0) {
-          if (editingEvent) {
-            const existingPrice = eventPrices.find((ep: any) => ep.event_id === savedEventId && ep.category_id === categoryId);
-            if (existingPrice) {
-              await updateEventPrice(existingPrice.id, { event_id: savedEventId, category_id: categoryId, price, includes_meal: formData.includes_meal });
-            } else {
-              await createEventPrice({ event_id: savedEventId, category_id: categoryId, price, includes_meal: formData.includes_meal });
-            }
-          } else {
-            await createEventPrice({ event_id: savedEventId, category_id: categoryId, price, includes_meal: formData.includes_meal });
+      // Guardar opciones de menú (diff contra las existentes)
+      if (formData.includes_meal) {
+        const existing = eventMealOptions.filter(o => o.event_id === savedEventId);
+        const keepIds = mealOptions.filter(o => o.id).map(o => o.id);
+
+        for (const old of existing) {
+          if (!keepIds.includes(old.id)) {
+            await deleteEventMealOption(old.id);
           }
+        }
+
+        for (let i = 0; i < mealOptions.length; i++) {
+          const opt = mealOptions[i];
+          const name = opt.name.trim();
+          if (!name) continue;
+          if (opt.id) {
+            await updateEventMealOption(opt.id, { name, extra_cost: opt.extra_cost || 0, sort_order: i });
+          } else {
+            await createEventMealOption({ event_id: savedEventId, name, extra_cost: opt.extra_cost || 0, sort_order: i });
+          }
+        }
+      } else if (editingEvent) {
+        // Comida desactivada: eliminar opciones existentes
+        for (const old of eventMealOptions.filter(o => o.event_id === savedEventId)) {
+          await deleteEventMealOption(old.id);
+        }
+      }
+
+      // Guardar precios por categoría — solo las que el admin cambió respecto
+      // al valor cargado (protege los datos si el formulario se abriera vacío)
+      const currentPrices = await fetchEventPricesForEvent(savedEventId);
+      for (const [categoryId, price] of Object.entries(priceForm) as [string, number][]) {
+        if (editingEvent && priceForm[categoryId] === originalPriceForm[categoryId]) continue;
+        const existingPrice = currentPrices.find((p: any) => p.category_id === categoryId);
+        if (existingPrice) {
+          await updateEventPrice(existingPrice.id, { event_id: savedEventId, category_id: categoryId, price, includes_meal: formData.includes_meal });
+        } else if (price > 0) {
+          await createEventPrice({ event_id: savedEventId, category_id: categoryId, price, includes_meal: formData.includes_meal });
         }
       }
       
@@ -236,10 +263,11 @@ export default function EventosAdmin() {
       console.log('✅ handleSaveEvent completado exitosamente');
     } catch (error) {
       console.error('❌ Error al guardar evento:', error);
+      alert(t('errorSavingEvent'));
     }
   };
 
-  const handleEditEvent = (event: any) => {
+  const handleEditEvent = async (event: any) => {
     setEditingEvent(event);
     setFormData({
       title: event.title,
@@ -256,14 +284,24 @@ export default function EventosAdmin() {
       news_id: event.news_id || ''
     });
     
-    // Cargar precios existentes
-    const prices = getEventPrices(event.id);
+    // Cargar precios existentes (consulta fresca a la BD, no el estado del contexto)
+    const prices = await fetchEventPricesForEvent(event.id);
     const newPriceForm: { [key: string]: number } = {};
     categories.forEach((cat: any) => {
       const price = prices.find((p: any) => p.category_id === cat.id);
       newPriceForm[cat.id] = price?.price || 0;
     });
     setPriceForm(newPriceForm);
+    setOriginalPriceForm(newPriceForm);
+
+    // Cargar opciones de menú existentes
+    setMealOptions(
+      eventMealOptions
+        .filter(o => o.event_id === event.id)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map(o => ({ id: o.id, name: o.name, extra_cost: o.extra_cost }))
+    );
+
     setShowModal(true);
   };
 
@@ -295,6 +333,8 @@ export default function EventosAdmin() {
       news_id: ''
     });
     setPriceForm({});
+    setOriginalPriceForm({});
+    setMealOptions([]);
   };
 
   const getRegistrationStats = (eventId: string) => {
@@ -321,6 +361,18 @@ export default function EventosAdmin() {
     return { withMeal, withoutMeal };
   };
 
+  const getMealOptionStats = (eventId: string) => {
+    const registrations = getEventRegistrations(eventId);
+    const options = eventMealOptions.filter(o => o.event_id === eventId);
+    return {
+      options: options.map(o => ({
+        ...o,
+        count: registrations.filter((r: any) => r.meal_option_id === o.id).length
+      })),
+      withoutMeal: registrations.filter((r: any) => !r.meal_option_id).length
+    };
+  };
+
   const exportToExcel = (eventId: string) => {
     const registrations = getEventRegistrations(eventId);
     const event = events.find((e: any) => e.id === eventId);
@@ -334,13 +386,15 @@ export default function EventosAdmin() {
       const user = users.find((u: any) => u.id === reg.user_id);
       const family = families.find((f: any) => f.id === user?.family_id);
       const category = categories.find((c: any) => c.id === reg.category_id);
-      
+      const mealOption = eventMealOptions.find(o => o.id === reg.meal_option_id);
+
       return {
         'Nombre usuario': `${user?.name || ''} ${user?.surname || ''}`.trim(),
         'Familia': family?.name || '',
         'Categoría': category?.name || '',
         'Precio final': `€${reg.total_price || 0}`,
-        'Comida': reg.includes_meal ? 'Sí' : 'No'
+        'Comida': reg.includes_meal ? 'Sí' : 'No',
+        'Opción de menú': mealOption?.name || ''
       };
     });
 
@@ -394,7 +448,12 @@ export default function EventosAdmin() {
                 </div>
               </div>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => {
+                  setPriceForm({});
+                  setOriginalPriceForm({});
+                  setMealOptions([]);
+                  setShowModal(true);
+                }}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
                 style={{ backgroundColor: 'rgb(48,80,105)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
@@ -421,7 +480,10 @@ export default function EventosAdmin() {
                 <div key={event.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div 
                   className="p-6 cursor-pointer hover:bg-slate-50 transition-colors"
-                  onClick={() => setExpandedEvent(expandedEvent === event.id ? null : event.id)}
+                  onClick={() => {
+                    if (expandedEvent !== event.id) refreshEventRegistrations();
+                    setExpandedEvent(expandedEvent === event.id ? null : event.id);
+                  }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -536,18 +598,39 @@ export default function EventosAdmin() {
                             {t('mealStats')}
                           </h4>
                           <div className="space-y-2">
-                            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
-                              <span className="text-sm font-medium text-orange-700">{t('withMeal')}</span>
-                              <span className="text-lg font-bold text-orange-700">
-                                {getMealStats(event.id).withMeal} {t('people')}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                              <span className="text-sm font-medium text-slate-700">{t('withoutMeal')}</span>
-                              <span className="text-lg font-bold text-slate-700">
-                                {getMealStats(event.id).withoutMeal} {t('people')}
-                              </span>
-                            </div>
+                            {eventMealOptions.some(o => o.event_id === event.id) ? (
+                              <>
+                                {getMealOptionStats(event.id).options.map((opt: any) => (
+                                  <div key={opt.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
+                                    <span className="text-sm font-medium text-orange-700">{opt.name}</span>
+                                    <span className="text-lg font-bold text-orange-700">
+                                      {opt.count} {t('people')}
+                                    </span>
+                                  </div>
+                                ))}
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <span className="text-sm font-medium text-slate-700">{t('withoutMeal')}</span>
+                                  <span className="text-lg font-bold text-slate-700">
+                                    {getMealOptionStats(event.id).withoutMeal} {t('people')}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
+                                  <span className="text-sm font-medium text-orange-700">{t('withMeal')}</span>
+                                  <span className="text-lg font-bold text-orange-700">
+                                    {getMealStats(event.id).withMeal} {t('people')}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                  <span className="text-sm font-medium text-slate-700">{t('withoutMeal')}</span>
+                                  <span className="text-lg font-bold text-slate-700">
+                                    {getMealStats(event.id).withoutMeal} {t('people')}
+                                  </span>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -758,6 +841,61 @@ export default function EventosAdmin() {
                         {formData.meal_cost === '' || parseFloat(formData.meal_cost) === 0 ? 'Gratuito' : 'Coste por persona'}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Opciones de menú */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      {t('mealOptions')}
+                    </label>
+                    <p className="text-xs text-slate-500 mb-3">{t('mealOptionsHelp')}</p>
+                    <div className="space-y-2">
+                      {mealOptions.map((opt, idx) => (
+                        <div key={idx} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={opt.name}
+                            onChange={(e) => {
+                              const next = [...mealOptions];
+                              next[idx] = { ...next[idx], name: e.target.value };
+                              setMealOptions(next);
+                            }}
+                            placeholder={t('mealOptionPlaceholder')}
+                            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                          />
+                          <div className="flex items-center space-x-1">
+                            <span className="text-slate-600">€</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={opt.extra_cost}
+                              onChange={(e) => {
+                                const next = [...mealOptions];
+                                next[idx] = { ...next[idx], extra_cost: parseFloat(e.target.value) || 0 };
+                                setMealOptions(next);
+                              }}
+                              className="w-20 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setMealOptions(mealOptions.filter((_, i) => i !== idx))}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMealOptions([...mealOptions, { name: '', extra_cost: 0 }])}
+                      className="mt-2 inline-flex items-center px-3 py-2 text-sm font-medium text-[rgb(48,80,105)] bg-white border border-[rgb(48,80,105)] rounded-lg hover:bg-slate-50 transition-colors"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      {t('addMealOption')}
+                    </button>
                   </div>
                 </div>
               )}

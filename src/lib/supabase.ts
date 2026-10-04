@@ -193,6 +193,15 @@ export interface EventPrice {
   created_at: string;
 }
 
+export interface EventMealOption {
+  id: string;
+  event_id: string;
+  name: string;
+  extra_cost: number;
+  sort_order: number;
+  created_at?: string;
+}
+
 export interface EventRegistration {
   id: string;
   event_id: string;
@@ -204,6 +213,7 @@ export interface EventRegistration {
   registered_by: string;
   registered_at: string;
   event_family_id?: string | null;
+  meal_option_id?: string | null;
 }
 
 // Peticiones

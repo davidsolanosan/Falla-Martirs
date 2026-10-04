@@ -14,7 +14,7 @@ export default function Eventos() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [showPastEvents, setShowPastEvents] = useState(false);
-  const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration } = useSupabase();
+  const { events, loading, users, families, eventPrices, createEventRegistration, updateEventRegistration, eventRegistrations, deleteEventRegistration, eventMealOptions, refreshEventPrices, fetchEventPricesForEvent } = useSupabase();
 
   const getEventRegistrations = (eventId: string) => {
     return eventRegistrations.filter((er: any) => er.event_id === eventId);
@@ -44,6 +44,7 @@ export default function Eventos() {
     }
     
     console.log('🔍 Abriendo modal de inscripción para evento:', event);
+    refreshEventPrices();
     setSelectedEvent(event);
     setIsRegistrationModalOpen(true);
   };
@@ -98,7 +99,7 @@ export default function Eventos() {
   };
 
   // Función para inscribir miembros
-  const handleRegister = async (memberIds, includesMeal, event) => {
+  const handleRegister = async (memberIds, includesMeal, mealOptionId, event) => {
     if (!event) return;
     
     // Verificar si el plazo ha finalizado
@@ -116,7 +117,17 @@ export default function Eventos() {
       
       console.log('🔍 Usuario completo:', fullUser);
       console.log('🔍 Familia:', userFamily);
-      
+
+      // Consulta fresca de precios del evento (evita estado desactualizado del contexto)
+      const eventPricesForEvent = await fetchEventPricesForEvent(event.id);
+      console.log('🔍 Precios del evento:', eventPricesForEvent);
+
+      if (eventPricesForEvent.length === 0) {
+        console.error('❌ No hay precios configurados para este evento');
+        alert(t('noEventPrices'));
+        return;
+      }
+
       for (const memberId of memberIds) {
         // Obtener categoría del miembro
         const member = users.find(u => u.id === memberId);
@@ -130,16 +141,6 @@ export default function Eventos() {
           continue;
         }
         
-        // Verificar si hay precios configurados para el evento
-        const eventPricesForEvent = eventPrices.filter(p => p.event_id === event.id);
-        console.log('🔍 Precios del evento:', eventPricesForEvent);
-        
-        if (eventPricesForEvent.length === 0) {
-          console.error('❌ No hay precios configurados para este evento');
-          alert(t('noEventPrices'));
-          continue;
-        }
-        
         // Buscar precio para la categoría específica
         let eventPrice = eventPricesForEvent.find(p => p.category_id === categoryId);
         let finalCategoryId = categoryId;
@@ -147,7 +148,7 @@ export default function Eventos() {
         if (!eventPrice) {
           console.warn('⚠️ No hay precio para la categoría específica, usando primera disponible');
           // Usar la primera categoría disponible como por defecto
-          const defaultCategory = eventPrices[0]?.category_id;
+          const defaultCategory = eventPricesForEvent[0]?.category_id;
           if (!defaultCategory) {
             console.error('❌ No hay categorías disponibles para este evento');
             alert(t('noEventCategories'));
@@ -158,33 +159,24 @@ export default function Eventos() {
           console.log('🔧 Usando categoría por defecto:', finalCategoryId);
         }
         
-        // Calcular el precio según la categoría
-        const finalEventPrice = eventPrices.find(p => 
-          p.event_id === event.id && p.category_id === finalCategoryId
-        );
-        
-        const calculatedPrice = finalEventPrice?.price || 0;
-        
-        console.log('💰 Precio calculado:', {
-          event_id: event.id,
-          category_id: categoryId,
-          eventPrice: finalEventPrice,
-          calculatedPrice
-        });
-        
-        console.log('🔍 Guardando inscripción con comida:', {
-          memberId,
-          includesMeal,
-          event_id: event.id,
-          category_id: categoryId
-        });
-        
+        // Calcular el precio: categoría + suplemento de la opción elegida
+        const finalEventPrice = eventPricesForEvent.find(p => p.category_id === finalCategoryId);
+
+        const chosenOption = mealOptionId
+          ? eventMealOptions.find(o => o.id === mealOptionId)
+          : null;
+        const mealCost = chosenOption
+          ? chosenOption.extra_cost
+          : (includesMeal && event.meal_cost ? event.meal_cost : 0);
+        const calculatedPrice = (finalEventPrice?.price || 0) + mealCost;
+
         await createEventRegistration({
           event_id: event.id,
           user_id: memberId,
           family_id: userFamily?.id || '',
           category_id: categoryId,
           includes_meal: includesMeal,
+          meal_option_id: mealOptionId || null,
           total_price: calculatedPrice,
           registered_by: user?.id || '',
           registered_at: new Date().toISOString()
@@ -195,6 +187,7 @@ export default function Eventos() {
       setSelectedEvent(null);
     } catch (error) {
       console.error('Error al inscribir:', error);
+      alert(t('errorRegistering'));
     }
   };
 
@@ -234,8 +227,23 @@ export default function Eventos() {
     
     console.log('🔍 initialMemberMeals final:', initialMemberMeals);
 
+    // Opciones de menú del evento (si las hay)
+    const mealOptionsForEvent = eventMealOptions
+      .filter(o => o.event_id === event.id)
+      .sort((a, b) => a.sort_order - b.sort_order);
+    const hasMealOptions = mealOptionsForEvent.length > 0;
+
+    const initialMemberOptions = {};
+    initiallyRegisteredMembers.forEach(memberId => {
+      const registration = eventRegistrations.find(r => r.event_id === event.id && r.user_id === memberId);
+      if (registration) {
+        initialMemberOptions[memberId] = registration.meal_option_id || null;
+      }
+    });
+
     const [selectedMembers, setSelectedMembers] = useState(initiallyRegisteredMembers);
     const [memberMeals, setMemberMeals] = useState(initialMemberMeals);
+    const [memberMealOptions, setMemberMealOptions] = useState(initialMemberOptions);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Verificar si el plazo ha finalizado
@@ -287,16 +295,16 @@ export default function Eventos() {
       }
       
       // Añadir coste adicional por comida si aplica
-      if (event.includes_meal && event.meal_cost) {
-        const membersWithMeal = selectedMembers.filter(id => memberMeals[id]).length;
-        const mealAdditionalCost = event.meal_cost * membersWithMeal;
-        total += mealAdditionalCost;
-        
-        console.log('🍽️ Coste adicional comida:', {
-          mealCostPerPerson: event.meal_cost,
-          membersWithMeal,
-          mealAdditionalCost
-        });
+      if (event.includes_meal) {
+        if (hasMealOptions) {
+          for (const id of selectedMembers) {
+            const opt = mealOptionsForEvent.find(o => o.id === memberMealOptions[id]);
+            total += opt?.extra_cost || 0;
+          }
+        } else if (event.meal_cost) {
+          const membersWithMeal = selectedMembers.filter(id => memberMeals[id]).length;
+          total += event.meal_cost * membersWithMeal;
+        }
       }
       
       console.log('🎯 TOTAL FINAL:', total);
@@ -312,12 +320,21 @@ export default function Eventos() {
           delete newMeals[memberId];
           return newMeals;
         });
+        setMemberMealOptions(prev => {
+          const next = { ...prev };
+          delete next[memberId];
+          return next;
+        });
       } else {
         // Si se selecciona, añadir con opción de comida por defecto (true si el evento incluye comida)
         setSelectedMembers([...selectedMembers, memberId]);
         setMemberMeals(prev => ({
           ...prev,
           [memberId]: event.includes_meal ? true : false // Por defecto marcado si el evento incluye comida
+        }));
+        setMemberMealOptions(prev => ({
+          ...prev,
+          [memberId]: hasMealOptions ? mealOptionsForEvent[0].id : null
         }));
       }
     };
@@ -339,35 +356,33 @@ export default function Eventos() {
           
           if (!isRegistered) {
             // Nuevo miembro - inscribir
-            await onRegister([memberId], memberMeals[memberId] || false, event);
+            const optionId = memberMealOptions[memberId] || null;
+            const includesMeal = hasMealOptions ? !!optionId : (memberMeals[memberId] || false);
+            await onRegister([memberId], includesMeal, optionId, event);
           } else {
             // Miembro existente - actualizar opciones de comida si han cambiado
             const registration = eventRegistrations.find(r => r.event_id === event.id && r.user_id === memberId);
+            const currentOptionId = registration?.meal_option_id || null;
+            const newOptionId = memberMealOptions[memberId] || null;
             const currentMealOption = registration?.includes_meal || false;
-            const newMealOption = memberMeals[memberId] || false;
-            
-            if (currentMealOption !== newMealOption) {
-              console.log('🔍 Actualizando opción comida para miembro existente:', {
-                memberId,
-                currentMealOption,
-                newMealOption
-              });
-              
+            const newMealOption = hasMealOptions ? !!newOptionId : (memberMeals[memberId] || false);
+
+            if (currentMealOption !== newMealOption || currentOptionId !== newOptionId) {
               // Calcular el precio para este miembro
               const member = familyMembers.find(m => m.id === memberId);
               const categoryId = member?.category_id || '';
               const finalEventPrice = eventPrices.find(p => p.event_id === event.id && p.category_id === categoryId);
               const categoryPrice = finalEventPrice?.price || 0;
-              const mealCost = (newMealOption && event.meal_cost) ? event.meal_cost : 0;
+              const option = newOptionId ? mealOptionsForEvent.find(o => o.id === newOptionId) : null;
+              const mealCost = option ? option.extra_cost : (newMealOption && event.meal_cost ? event.meal_cost : 0);
               const calculatedPrice = categoryPrice + mealCost;
-              
+
               // Actualizar la inscripción existente
               await updateEventRegistration(registration.id, {
                 includes_meal: newMealOption,
+                meal_option_id: newOptionId,
                 total_price: calculatedPrice
               });
-            } else {
-              console.log('Miembro ya inscrito, sin cambios en comida:', memberId);
             }
           }
         }
@@ -477,23 +492,39 @@ export default function Eventos() {
                   
                   {selectedMembers.includes(member.id) && event.includes_meal && (
                     <div className="ml-8 p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={memberMeals[member.id] || false}
-                            onChange={() => handleMealToggle(member.id)}
-                            className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
-                              memberMeals[member.id] 
-                                ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]' 
-                                : 'text-slate-600 bg-white border-slate-300'
-                            }`}
-                          />
-                          {event.meal_type && (
-                            <p className="text-sm text-slate-700 font-medium">{event.meal_type}</p>
-                          )}
-                        </label>
-                      </div>
+                      {hasMealOptions ? (
+                        <select
+                          value={memberMealOptions[member.id] ?? ''}
+                          onChange={(e) => setMemberMealOptions(prev => ({ ...prev, [member.id]: e.target.value || null }))}
+                          disabled={deadlinePassed}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[rgb(48,80,105)] disabled:opacity-50"
+                        >
+                          <option value="">{t('withoutMeal')}</option>
+                          {mealOptionsForEvent.map(o => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}{o.extra_cost > 0 ? ` (+${o.extra_cost} €)` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={memberMeals[member.id] || false}
+                              onChange={() => handleMealToggle(member.id)}
+                              className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
+                                memberMeals[member.id]
+                                  ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]'
+                                  : 'text-slate-600 bg-white border-slate-300'
+                              }`}
+                            />
+                            {event.meal_type && (
+                              <p className="text-sm text-slate-700 font-medium">{event.meal_type}</p>
+                            )}
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -518,12 +549,25 @@ export default function Eventos() {
                   <div className="flex items-center">
                     <span className="text-sm font-medium text-slate-600">{t('additionalCost')}:</span>
                     <span className="text-sm text-slate-800 ml-2">
-                      {event.meal_cost !== undefined && event.meal_cost !== null 
-                        ? `${event.meal_cost} €` 
+                      {event.meal_cost !== undefined && event.meal_cost !== null
+                        ? `${event.meal_cost} €`
                         : t('free')
                       }
                     </span>
                   </div>
+                  {hasMealOptions && (
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <span className="text-sm font-medium text-slate-600">{t('mealOptions')}:</span>
+                      <ul className="mt-2 space-y-1">
+                        {mealOptionsForEvent.map(o => (
+                          <li key={o.id} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-800">{o.name}</span>
+                            <span className="text-slate-600">{o.extra_cost > 0 ? `+${o.extra_cost} €` : t('free')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
