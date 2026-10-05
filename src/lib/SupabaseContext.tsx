@@ -121,7 +121,7 @@ interface SupabaseContextType {
   createCasalRental: (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => Promise<CasalRental>;
   updateCasalRental: (id: string, rental: Partial<CasalRental>) => Promise<CasalRental>;
   deleteCasalRental: (id: string) => Promise<void>;
-  updateCasalSettings: (id: string, settings: Partial<CasalSettings>) => Promise<CasalSettings>;
+  updateCasalSettings: (id: string, settings: Partial<CasalSettings>) => Promise<void>;
   
   // Funciones de autenticación
   loginUser: (email: string, password: string) => Promise<{user: User, isFirstLogin: boolean}>;
@@ -1278,7 +1278,12 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
             email: authUser.email || '',
             name: authUser.user_metadata?.name || 'Usuario',
             surname: authUser.user_metadata?.surname || '',
-            role: 'master_admin' // Temporal para pruebas
+            birth_year: '',
+            dni: '',
+            phone: '',
+            role: 'master_admin', // Temporal para pruebas
+            created_at: '',
+            updated_at: ''
           });
         }
         return;

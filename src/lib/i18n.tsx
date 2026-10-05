@@ -11,8 +11,8 @@ export const translations = {
     navEvents: "Eventos",
     navQuotas: "Cuotas",
     navLottery: "Loterías",
-    navDocuments: "Documentos",
-    navPetitions: "Peticiones",
+    navDocuments: "Multimedia",
+    navPetitions: "Compras",
     navCasal: "Alquiler Casal",
     navAdminCasal: "Administrar Casal",
     navSettings: "Configuración",
@@ -23,7 +23,7 @@ export const translations = {
     navAdminEvents: "Eventos",
     navAdminQuotas: "Cuotas",
     navAdminLottery: "Loterías",
-    navAdminDocuments: "Documentos",
+    navAdminDocuments: "Multimedia",
     navAdminPetitions: "Peticiones",
     navAdminSettings: "Configuración",
     viewAsAdmin: "Ver como Admin",
@@ -336,6 +336,8 @@ export const translations = {
     loteria: "Lotería",
     documents: "Documentos",
     galeria: "Galería",
+    multimedia: "Multimedia",
+    compres: "Compras",
     configuracio: "Configuración",
     comingSoon: "Próximamente",
     
@@ -682,6 +684,7 @@ export const translations = {
     newsUpdatedAt: "Actualizada el",
     newsPublishedAt: "Publicada el",
     markAsRead: "Marcar como leída",
+    markAsUnread: "Marcar como no leída",
     unreadNews: "Noticias no leídas",
     readNews: "Noticias leídas",
     noUnreadNews: "No hay noticias no leídas",
@@ -710,6 +713,9 @@ export const translations = {
     myRentals: "Mis Solicitudes",
     noRequests: "No tienes solicitudes de alquiler",
     cancel: "Cancelar",
+    actAsUser: "Actuar como este fallero",
+    actingAs: "Actuando como",
+    backToMyAccount: "Volver a mi cuenta",
     rentalRules: "Normas de Uso",
     noRulesAvailable: "No hay normas disponibles",
     requestSent: "Solicitud enviada correctamente",
@@ -756,8 +762,8 @@ export const translations = {
     navEvents: "Esdeveniments",
     navQuotas: "Quotes",
     navLottery: "Loteries",
-    navDocuments: "Documents",
-    navPetitions: "Peticions",
+    navDocuments: "Multimèdia",
+    navPetitions: "Compres",
     navCasal: "Lloguer Casal",
     navAdminCasal: "Administrar Casal",
     navSettings: "Configuració",
@@ -768,7 +774,7 @@ export const translations = {
     navAdminEvents: "Esdeveniments",
     navAdminQuotas: "Quotes",
     navAdminLottery: "Loteries",
-    navAdminDocuments: "Documents",
+    navAdminDocuments: "Multimèdia",
     navAdminPetitions: "Peticions",
     navAdminSettings: "Configuració",
     viewAsAdmin: "Veure com a Admin",
@@ -1238,6 +1244,8 @@ export const translations = {
     loteria: "Loteria",
     documents: "Documents",
     galeria: "Galeria",
+    multimedia: "Multimèdia",
+    compres: "Compres",
     configuracio: "Configuració",
     comingSoon: "Pròximament",
     
@@ -1434,6 +1442,7 @@ export const translations = {
     newsUpdatedAt: "Actualitzada el",
     newsPublishedAt: "Publicada el",
     markAsRead: "Marcar com a llegida",
+    markAsUnread: "Marcar com a no llegida",
     unreadNews: "Notícies no llegides",
     readNews: "Notícies llegides",
     noUnreadNews: "No hi ha notícies no llegides",
@@ -1462,6 +1471,9 @@ export const translations = {
     myRentals: "Les meues Sol·licituds",
     noRequests: "No tens sol·licituds de lloguer",
     cancel: "Cancel·lar",
+    actAsUser: "Actuar com este faller",
+    actingAs: "Actuant com",
+    backToMyAccount: "Tornar al meu compte",
     rentalRules: "Normes d'Ús",
     noRulesAvailable: "No hi ha normes disponibles",
     requestSent: "Sol·licitud enviada correctament",
@@ -1515,7 +1527,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguage] = useState<Language>('va'); // Default to Valencian
 
   const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations['es'][key] || key;
+    const dict: Partial<Record<TranslationKey, string>> = translations[language];
+    return dict[key] || translations['es'][key] || key;
   };
 
   return (

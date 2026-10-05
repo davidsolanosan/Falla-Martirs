@@ -53,21 +53,21 @@ export default function Inici() {
     },
     {
       id: 'documents',
-      title: t('documents'),
-      icon: 'Documents.png',
+      title: t('multimedia'),
+      icon: 'multimedia.png',
       color: 'from-cyan-500 to-cyan-600',
       bgColor: 'bg-cyan-50',
       iconColor: 'text-cyan-600',
       route: '/documentos'
     },
     {
-      id: 'galeria',
-      title: t('galeria'),
-      icon: 'galeria.png',
+      id: 'compres',
+      title: t('compres'),
+      icon: 'compres.png',
       color: 'from-pink-500 to-pink-600',
       bgColor: 'bg-pink-50',
       iconColor: 'text-pink-600',
-      route: '/documentos'
+      route: '/peticiones'
     },
     {
       id: 'configuracio',
@@ -107,7 +107,7 @@ export default function Inici() {
               
               <div className="flex flex-col h-full relative">
                 {/* Icono flotante para imágenes personalizadas */}
-                {(item.id === 'esdeveniments' || item.id === 'noticies' || item.id === 'quotes' || item.id === 'loteria' || item.id === 'documents' || item.id === 'galeria') && (
+                {(item.id === 'esdeveniments' || item.id === 'noticies' || item.id === 'quotes' || item.id === 'loteria' || item.id === 'documents' || item.id === 'compres') && (
                   <div className="absolute top-3 left-1/2 transform -translate-x-1/2 group-hover:scale-110 transition-transform duration-200 z-10">
                     <img 
                       src={`/icons/${item.icon}`} 
@@ -118,14 +118,14 @@ export default function Inici() {
                 )}
                 
                 {/* Icono normal para otros */}
-                {(item.id !== 'esdeveniments' && item.id !== 'noticies' && item.id !== 'quotes' && item.id !== 'loteria' && item.id !== 'documents' && item.id !== 'galeria') && (
+                {(item.id !== 'esdeveniments' && item.id !== 'noticies' && item.id !== 'quotes' && item.id !== 'loteria' && item.id !== 'documents' && item.id !== 'compres') && (
                   <div className={`${item.bgColor} w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
                     <Icon className={`w-9 h-9 ${item.iconColor}`} />
                   </div>
                 )}
                 
                 {/* Contenido inferior */}
-                <div className={`${(item.id === 'esdeveniments' || item.id === 'noticies' || item.id === 'quotes' || item.id === 'loteria' || item.id === 'documents' || item.id === 'galeria') ? 'absolute top-25 left-0 right-0' : ''}`}>
+                <div className={`${(item.id === 'esdeveniments' || item.id === 'noticies' || item.id === 'quotes' || item.id === 'loteria' || item.id === 'documents' || item.id === 'compres') ? 'absolute top-25 left-0 right-0' : ''}`}>
                   {/* Título */}
                   <h3 className="text-lg font-bold text-center mb-1 tracking-wide" style={{ fontFamily: "'Madimi One', sans-serif", color: "#464971" }}>
                     {item.title}

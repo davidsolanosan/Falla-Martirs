@@ -275,7 +275,7 @@ export default function Cuotas() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(48,80,105)] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#464971] mx-auto mb-4"></div>
           <p className="text-slate-600">{t('loading')}</p>
         </div>
       </div>
@@ -308,7 +308,7 @@ export default function Cuotas() {
       {/* Family Info */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
             {t('familyInfo')}
           </h2>
           <span className="text-sm text-slate-600">
@@ -326,7 +326,7 @@ export default function Cuotas() {
                 return (
                   <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                     <span className="text-sm text-slate-800">{member.name} {member.surname}</span>
-                    <span className="text-sm font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                    <span className="text-sm font-semibold" style={{ color: '#464971' }}>
                       {category?.name} - €{category?.quotaamount?.toFixed(2) || '0.00'}/{t('year')}
                     </span>
                   </div>
@@ -341,7 +341,7 @@ export default function Cuotas() {
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">{t('totalAnnualCost')}</span>
-                <span className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <span className="text-2xl font-bold" style={{ color: '#464971' }}>
                   €{quota.annualCost.toFixed(2)}
                 </span>
               </div>
@@ -353,7 +353,7 @@ export default function Cuotas() {
       {/* Monthly Quota */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
             {t('monthlyQuota')}
           </h2>
           <div className="flex items-center space-x-2">
@@ -374,7 +374,7 @@ export default function Cuotas() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-slate-600 mb-1">{t('monthlyPayment')}</p>
-              <p className="text-3xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <p className="text-3xl font-bold" style={{ color: '#464971' }}>
                 €{quota.monthlyQuota.toFixed(2)}
               </p>
             </div>
@@ -396,7 +396,7 @@ export default function Cuotas() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">{t('annualQuota')}</span>
-                <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                <span className="font-semibold" style={{ color: '#464971' }}>
                   €{quota.annualCost.toFixed(2)}
                 </span>
               </div>
@@ -408,7 +408,7 @@ export default function Cuotas() {
               </div>
               <div className="flex justify-between items-center pt-3 border-t-2 border-orange-200">
                 <span className="font-bold text-slate-800 text-lg">{t('totalToPay')}</span>
-                <span className="font-bold text-xl" style={{ color: 'rgb(48,80,105)' }}>
+                <span className="font-bold text-xl" style={{ color: '#464971' }}>
                   €{(quota.annualCost + eventsTotalCost).toFixed(2)}
                 </span>
               </div>
@@ -424,11 +424,11 @@ export default function Cuotas() {
             className="flex items-center justify-between cursor-pointer"
             onClick={() => setExpandedSection(expandedSection === 'events' ? null : 'events')}
           >
-            <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+            <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
               {t('events')}
             </h2>
             <div className="flex items-center space-x-3">
-              <span className="bg-[rgb(48,80,105)]/10 px-2 py-1 rounded-full text-xs font-medium text-[rgb(48,80,105)]">
+              <span className="bg-[#464971]/10 px-2 py-1 rounded-full text-xs font-medium text-[#464971]">
                 {familyEvents.length}
               </span>
               {expandedSection === 'events' ? (
@@ -499,7 +499,7 @@ export default function Cuotas() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <span className="font-bold text-lg text-[rgb(48,80,105)]">
+                        <span className="font-bold text-lg text-[#464971]">
                           €{eventsTotalCost.toFixed(2)}
                         </span>
                       </td>
@@ -518,7 +518,7 @@ export default function Cuotas() {
           className="flex items-center justify-between cursor-pointer"
           onClick={() => setExpandedSection(expandedSection === 'lottery' ? null : 'lottery')}
         >
-          <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+          <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
             {t('myLotteryTickets')}
           </h2>
           {expandedSection === 'lottery' ? (
@@ -538,7 +538,7 @@ export default function Cuotas() {
                   <span className="font-medium text-slate-700">{t('ordinaryLotteries')}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                  <span className="font-semibold" style={{ color: '#464971' }}>
                     {quota.ordinaryTickets} {t('tickets')}
                   </span>
                   <p className="text-xs text-slate-500">{quota.ordinaryCount} {t('draws')}</p>
@@ -554,7 +554,7 @@ export default function Cuotas() {
                   <span className="font-medium text-slate-700">{t('christmasLottery')}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                  <span className="font-semibold" style={{ color: '#464971' }}>
                     {quota.christmasTickets} {t('tickets')}
                   </span>
                   <p className="text-xs text-slate-500">{quota.christmasCount} {t('draws')}</p>
@@ -570,7 +570,7 @@ export default function Cuotas() {
                   <span className="font-medium text-slate-700">{t('childLottery')}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                  <span className="font-semibold" style={{ color: '#464971' }}>
                     {quota.childTickets} {t('tickets')}
                   </span>
                   <p className="text-xs text-slate-500">{quota.childCount} {t('draws')}</p>
@@ -586,7 +586,7 @@ export default function Cuotas() {
                   <span className="font-medium text-slate-700">{t('hortaLottery')}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                  <span className="font-semibold" style={{ color: '#464971' }}>
                     {quota.hortaTickets} {t('tickets')}
                   </span>
                   <p className="text-xs text-slate-500">{quota.hortaCount} {t('draws')}</p>

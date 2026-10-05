@@ -420,7 +420,7 @@ export default function EventosAdmin() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(48,80,105)] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#464971] mx-auto mb-4"></div>
           <p className="text-slate-600">{t('loading')}</p>
         </div>
       </div>
@@ -435,11 +435,11 @@ export default function EventosAdmin() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-                  <Calendar className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+                <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+                  <Calendar className="w-6 h-6" style={{ color: '#464971' }} />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                  <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                     {t('eventManagement')}
                   </h1>
                   <p className="text-slate-600">
@@ -455,9 +455,9 @@ export default function EventosAdmin() {
                   setShowModal(true);
                 }}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                style={{ backgroundColor: 'rgb(48,80,105)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+                style={{ backgroundColor: '#464971' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 {t('createEvent')}
@@ -555,7 +555,7 @@ export default function EventosAdmin() {
                               <span className="text-sm font-medium text-slate-700">
                                 {getCategoryName(price.category_id)}
                               </span>
-                              <span className="text-sm font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                              <span className="text-sm font-bold" style={{ color: '#464971' }}>
                                 {price.includes_meal && '+'}€{price.price.toFixed(2)}
                               </span>
                               {price.includes_meal && (
@@ -652,7 +652,7 @@ export default function EventosAdmin() {
                           <button
                             onClick={() => exportToExcel(event.id)}
                             className="w-full flex items-center justify-center p-3 hover:opacity-90 text-white rounded-lg transition-colors"
-                            style={{ backgroundColor: 'rgb(48,80,105)' }}
+                            style={{ backgroundColor: '#464971' }}
                           >
                             <Download className="w-5 h-5 mr-2" />
                             {t('exportToExcel')}
@@ -698,7 +698,7 @@ export default function EventosAdmin() {
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     placeholder={t('eventTitlePlaceholder')}
                     required
                   />
@@ -711,7 +711,7 @@ export default function EventosAdmin() {
                     type="url"
                     value={formData.image_url}
                     onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     placeholder={t('eventImagePlaceholder')}
                   />
                 </div>
@@ -740,7 +740,7 @@ export default function EventosAdmin() {
                     type="date"
                     value={formData.event_date}
                     onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     required
                   />
                 </div>
@@ -752,7 +752,7 @@ export default function EventosAdmin() {
                     type="date"
                     value={formData.registration_deadline}
                     onChange={(e) => setFormData({ ...formData, registration_deadline: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     required
                   />
                 </div>
@@ -765,7 +765,7 @@ export default function EventosAdmin() {
                     type="text"
                     value={formData.site}
                     onChange={(e) => setFormData({ ...formData, site: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     placeholder={t('sitePlaceholder')}
                   />
                 </div>
@@ -778,7 +778,7 @@ export default function EventosAdmin() {
                     type="time"
                     value={formData.time}
                     onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -789,7 +789,7 @@ export default function EventosAdmin() {
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded border-slate-200 text-[rgb(48,80,105)] focus:ring-2 focus:ring-[rgb(48,80,105)]"
+                    className="rounded border-slate-200 text-[#464971] focus:ring-2 focus:ring-[#464971]"
                   />
                   <span className="text-sm font-medium text-slate-700">{t('active')}</span>
                 </label>
@@ -798,7 +798,7 @@ export default function EventosAdmin() {
                     type="checkbox"
                     checked={formData.includes_meal}
                     onChange={(e) => setFormData({ ...formData, includes_meal: e.target.checked })}
-                    className="rounded border-slate-200 text-[rgb(48,80,105)] focus:ring-2 focus:ring-[rgb(48,80,105)]"
+                    className="rounded border-slate-200 text-[#464971] focus:ring-2 focus:ring-[#464971]"
                   />
                   <span className="text-sm font-medium text-slate-700">{t('includesMeal')}</span>
                 </label>
@@ -818,7 +818,7 @@ export default function EventosAdmin() {
                       value={formData.meal_type}
                       onChange={(e) => setFormData({ ...formData, meal_type: e.target.value })}
                       placeholder="Ej: bocadillo de longanizas con tomate"
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                     />
                   </div>
                   
@@ -835,7 +835,7 @@ export default function EventosAdmin() {
                         placeholder="0.00"
                         min="0"
                         step="0.01"
-                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                        className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                       />
                       <span className="text-sm text-slate-500">
                         {formData.meal_cost === '' || parseFloat(formData.meal_cost) === 0 ? 'Gratuito' : 'Coste por persona'}
@@ -861,7 +861,7 @@ export default function EventosAdmin() {
                               setMealOptions(next);
                             }}
                             placeholder={t('mealOptionPlaceholder')}
-                            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                           />
                           <div className="flex items-center space-x-1">
                             <span className="text-slate-600">€</span>
@@ -875,7 +875,7 @@ export default function EventosAdmin() {
                                 next[idx] = { ...next[idx], extra_cost: parseFloat(e.target.value) || 0 };
                                 setMealOptions(next);
                               }}
-                              className="w-20 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                              className="w-20 px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                             />
                           </div>
                           <button
@@ -891,7 +891,7 @@ export default function EventosAdmin() {
                     <button
                       type="button"
                       onClick={() => setMealOptions([...mealOptions, { name: '', extra_cost: 0 }])}
-                      className="mt-2 inline-flex items-center px-3 py-2 text-sm font-medium text-[rgb(48,80,105)] bg-white border border-[rgb(48,80,105)] rounded-lg hover:bg-slate-50 transition-colors"
+                      className="mt-2 inline-flex items-center px-3 py-2 text-sm font-medium text-[#464971] bg-white border border-[#464971] rounded-lg hover:bg-slate-50 transition-colors"
                     >
                       <Plus className="w-4 h-4 mr-1" />
                       {t('addMealOption')}
@@ -918,7 +918,7 @@ export default function EventosAdmin() {
                               step="0.01"
                               value={priceForm[category.id] || ''}
                               onChange={(e) => setPriceForm({ ...priceForm, [category.id]: parseFloat(e.target.value) || 0 })}
-                              className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                              className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                               placeholder="0.00"
                             />
                           </div>
@@ -927,7 +927,7 @@ export default function EventosAdmin() {
                               type="checkbox"
                               checked={formData.includes_meal}
                               onChange={(e) => setFormData({ ...formData, includes_meal: e.target.checked })}
-                              className="rounded border-slate-200 text-[rgb(48,80,105)] focus:ring-2 focus:ring-[rgb(48,80,105)]"
+                              className="rounded border-slate-200 text-[#464971] focus:ring-2 focus:ring-[#464971]"
                             />
                             <span className="text-sm text-slate-600">{t('withMeal')}</span>
                           </label>
@@ -952,9 +952,9 @@ export default function EventosAdmin() {
                   handleSaveEvent();
                 }}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                style={{ backgroundColor: 'rgb(48,80,105)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+                style={{ backgroundColor: '#464971' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 {editingEvent ? t('updateEvent') : t('createEvent')}

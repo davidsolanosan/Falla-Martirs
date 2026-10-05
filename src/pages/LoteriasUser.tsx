@@ -136,8 +136,8 @@ export default function LoteriasUser() {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
           <div className="flex items-center">
-            <TrophyIcon className="h-6 w-6 mr-2" style={{color: 'rgb(48,80,105)'}} />
-            <h1 className="text-xl font-bold" style={{color: 'rgb(48,80,105)'}}>{t('lottery_title')}</h1>
+            <TrophyIcon className="h-6 w-6 mr-2" style={{color: '#464971'}} />
+            <h1 className="text-xl font-bold" style={{color: '#464971'}}>{t('lottery_title')}</h1>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ export default function LoteriasUser() {
             <div key={month} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div 
                 className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
-                style={{borderBottom: '1px solid rgb(48,80,105)', backgroundColor: 'rgb(248,250,252)'}}
+                style={{borderBottom: '1px solid #464971', backgroundColor: 'rgb(248,250,252)'}}
                 onClick={() => toggleMonth(month)}
               >
                 <div className="flex justify-between items-center">
@@ -156,7 +156,7 @@ export default function LoteriasUser() {
                     ) : (
                       <ChevronRightIcon className="h-5 w-5 text-gray-600 mr-2" />
                     )}
-                    <h2 className="text-base font-bold" style={{color: 'rgb(48,80,105)'}}>
+                    <h2 className="text-base font-bold" style={{color: '#464971'}}>
                       {month}
                     </h2>
                   </div>
@@ -174,7 +174,7 @@ export default function LoteriasUser() {
               </div>
 
               {expandedMonths.has(month) && (
-                <div className="divide-y" style={{borderTopColor: 'rgb(48,80,105)'}}>
+                <div className="divide-y" style={{borderTopColor: '#464971'}}>
                   {lotteries.map((lottery) => (
                     <div 
                       key={lottery.id} 
@@ -253,11 +253,11 @@ export default function LoteriasUser() {
                                 <div key={ticket.id} className="bg-gray-50 border border-gray-200 rounded p-2">
                                   <div className="flex justify-between items-center">
                                     <div className="flex items-center space-x-2">
-                                      <span className="font-bold text-sm px-2 py-0.5 rounded" style={{color: 'rgb(48,80,105)', backgroundColor: 'rgb(239,246,255)'}}>
+                                      <span className="font-bold text-sm px-2 py-0.5 rounded" style={{color: '#464971', backgroundColor: '#f2f2f7'}}>
                                         {ticket.lottery_number}
                                       </span>
                                       {ticket.primitive_numbers && ticket.primitive_numbers.length > 0 && (
-                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{color: 'rgb(48,80,105)', backgroundColor: 'rgb(239,246,255)'}}>
+                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{color: '#464971', backgroundColor: '#f2f2f7'}}>
                                           {ticket.primitive_numbers.join('-')}
                                         </span>
                                       )}

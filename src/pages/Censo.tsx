@@ -12,11 +12,14 @@ import { MasterAdminInit } from '../components/admin/MasterAdminInit';
 import { Modal } from '../components/ui/Modal';
 import FamilyManagementModal from '../components/forms/FamilyManagementModal';
 import { AutoFamilyGenerator } from '../components/forms/AutoFamilyGenerator';
-import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash, Users as UsersIcon } from 'lucide-react';
+import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash, Users as UsersIcon, UserCog } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Category } from '../lib/supabase';
 
 export default function Censo() {
   const { families, categories, users, updateUser, deleteUser, updateFamily, deleteFamily, familyRepresentatives, setRepresentatives } = useSupabase(); // Datos de Supabase
-  const { user } = useAuth(); // Usuario de AuthContext
+  const { user, realUser, startImpersonation } = useAuth(); // Usuario de AuthContext
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'usuarios' | 'familias'>('usuarios');
   const [searchTerm, setSearchTerm] = useState('');
@@ -360,35 +363,35 @@ export default function Censo() {
                     setUserToEdit(null);
                     setIsUserModalOpen(true);
                   }}
-                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] rounded-xl hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] rounded-xl hover:bg-[#464971] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('addFallero')}
                 </button>
                 <button
                   onClick={() => setIsFamilyModalOpen(true)}
-                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('addFamily')}
                 </button>
                                 <button
                   onClick={() => setIsImportModalOpen(true)}
-                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   Importar Censo
                 </button>
                 <button
                   onClick={exportToExcel}
-                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Exportar a Excel
                 </button>
                 <button
                   onClick={() => setIsAutoFamilyGeneratorOpen(true)}
-                  className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+                  className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
                 >
                   <UsersIcon className="h-4 w-4 mr-2" />
                   Gen. Fam
@@ -445,8 +448,8 @@ export default function Censo() {
                   onClick={clearCategoryFilters}
                   className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
                     selectedCategories.length === 0 
-                      ? 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]'
-                      : 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white'
+                      ? 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]'
+                      : 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white'
                   }`}
                 >
                   Total ({filteredUsers.length})
@@ -458,21 +461,21 @@ export default function Censo() {
                   const categoryName = cat.name.toLowerCase();
                   
                   // Asignar colores a los botones según categoría
-                let buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
-                let selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                let buttonColor = 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white';
+                let selectedColor = 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]';
                 
                 if (categoryName.includes('infantil') || categoryName.includes('bebé') || categoryName.includes('bebe')) {
-                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
-                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                  buttonColor = 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white';
+                  selectedColor = 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]';
                 } else if (categoryName.includes('juvenil')) {
-                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
-                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                  buttonColor = 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white';
+                  selectedColor = 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]';
                 } else if (categoryName.includes('adulto')) {
-                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
-                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                  buttonColor = 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white';
+                  selectedColor = 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]';
                 } else if (categoryName.includes('senior') || categoryName.includes('jubilado')) {
-                  buttonColor = 'bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white';
-                  selectedColor = 'bg-[rgb(48,80,105)] text-white border-3 border-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]';
+                  buttonColor = 'bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white';
+                  selectedColor = 'bg-[#464971] text-white border-3 border-[#464971] hover:bg-white hover:text-[#464971]';
                 }
                 
                 return (
@@ -594,6 +597,29 @@ export default function Censo() {
                               >
                                 <Edit className="h-4 w-4" />
                               </button>
+                              {user.id !== realUser?.id && user.role !== 'admin' && user.role !== 'master_admin' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    startImpersonation({
+                                      id: user.id,
+                                      email: user.email,
+                                      name: user.name,
+                                      surname: user.surname,
+                                      role: user.role,
+                                      first_login: user.first_login,
+                                      dni: user.dni,
+                                      birth_year: user.birth_year,
+                                      family_id: user.family_id
+                                    });
+                                    navigate('/');
+                                  }}
+                                  className="text-amber-600 hover:text-amber-800 p-1 rounded hover:bg-amber-50"
+                                  title={t('actAsUser')}
+                                >
+                                  <UserCog className="h-4 w-4" />
+                                </button>
+                              )}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

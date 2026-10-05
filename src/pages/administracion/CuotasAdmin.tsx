@@ -330,11 +330,11 @@ export default function CuotasAdmin() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-                <CreditCard className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+              <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+                <CreditCard className="w-6 h-6" style={{ color: '#464971' }} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                   {t('navAdminQuotas')}
                 </h1>
                 <p className="text-slate-600">
@@ -418,7 +418,7 @@ export default function CuotasAdmin() {
                           e.stopPropagation();
                           handleFamilySelect(family);
                         }}
-                        className="inline-flex items-center px-4 py-2 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white rounded-xl transition-all text-sm font-medium"
+                        className="inline-flex items-center px-4 py-2 bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white rounded-xl transition-all text-sm font-medium"
                       >
                         <CreditCard className="w-4 h-4 mr-2" />
                         Configurar
@@ -512,7 +512,7 @@ export default function CuotasAdmin() {
                       return (
                         <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                           <span className="text-sm text-slate-800">{member.name} {member.surname}</span>
-                          <span className="text-sm font-semibold text-[rgb(48,80,105)]">
+                          <span className="text-sm font-semibold text-[#464971]">
                             {category?.name} - €{category?.quotaamount?.toFixed(2) || '0.00'}/año
                           </span>
                         </div>
@@ -525,7 +525,7 @@ export default function CuotasAdmin() {
                 <div className="p-4 bg-blue-50 rounded-xl">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-slate-700">Coste anual total:</span>
-                    <span className="text-2xl font-bold text-[rgb(48,80,105)]">
+                    <span className="text-2xl font-bold text-[#464971]">
                       €{calculateAnnualCost(selectedFamily.id).toFixed(2)}
                     </span>
                   </div>
@@ -696,7 +696,7 @@ export default function CuotasAdmin() {
                     </div>
                     <div className="flex justify-between pt-2 border-t border-slate-200">
                       <span className="text-slate-700 font-medium">Cuota mensual:</span>
-                      <span className="text-xl font-bold text-[rgb(48,80,105)]">
+                      <span className="text-xl font-bold text-[#464971]">
                         €{calculateMonthlyQuota(selectedFamily).monthlyQuota.toFixed(2)}
                       </span>
                     </div>
@@ -712,7 +712,7 @@ export default function CuotasAdmin() {
                 </button>
                 <button
                   onClick={handleSaveFamily}
-                  className="inline-flex items-center px-4 py-2 bg-[rgb(48,80,105)] text-white rounded-lg hover:bg-[rgb(38,70,95)] transition-colors"
+                  className="inline-flex items-center px-4 py-2 bg-[#464971] text-white rounded-lg hover:bg-[#3b3d5e] transition-colors"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Guardar

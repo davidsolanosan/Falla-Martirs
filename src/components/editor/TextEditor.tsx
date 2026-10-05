@@ -204,7 +204,7 @@ export default function TextEditor({ value, onChange, placeholder }: TextEditorP
       <div
         ref={editorRef}
         contentEditable
-        className="min-h-[300px] p-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent bg-white"
+        className="min-h-[300px] p-4 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#464971] focus:border-transparent bg-white"
         style={{ 
           fontSize: `${fontSize}px`,
           color: textColor,

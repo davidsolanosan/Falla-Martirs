@@ -12,7 +12,7 @@ const APP_SECTIONS = [
   { key: 'documentos', nameKey: 'navDocuments' },
   { key: 'peticiones', nameKey: 'navPetitions' },
   { key: 'casal', nameKey: 'navCasal' },
-];
+] as const;
 
 export default function ConfiguracionAdmin() {
   const { t } = useTranslation();
@@ -148,11 +148,11 @@ export default function ConfiguracionAdmin() {
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="flex items-center space-x-3">
-            <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-              <Settings className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+            <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+              <Settings className="w-6 h-6" style={{ color: '#464971' }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                 {t('generalSettings')}
               </h1>
               <p className="text-slate-600">
@@ -169,7 +169,7 @@ export default function ConfiguracionAdmin() {
               onClick={() => setActiveTab('categories')}
               className={`flex items-center px-6 py-4 font-medium transition-colors ${
                 activeTab === 'categories'
-                  ? 'text-[rgb(48,80,105)] border-b-2 border-[rgb(48,80,105)]'
+                  ? 'text-[#464971] border-b-2 border-[#464971]'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
@@ -180,7 +180,7 @@ export default function ConfiguracionAdmin() {
               onClick={() => setActiveTab('lottery')}
               className={`flex items-center px-6 py-4 font-medium transition-colors ${
                 activeTab === 'lottery'
-                  ? 'text-[rgb(48,80,105)] border-b-2 border-[rgb(48,80,105)]'
+                  ? 'text-[#464971] border-b-2 border-[#464971]'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
@@ -191,7 +191,7 @@ export default function ConfiguracionAdmin() {
               onClick={() => setActiveTab('sections')}
               className={`flex items-center px-6 py-4 font-medium transition-colors ${
                 activeTab === 'sections'
-                  ? 'text-[rgb(48,80,105)] border-b-2 border-[rgb(48,80,105)]'
+                  ? 'text-[#464971] border-b-2 border-[#464971]'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
@@ -205,7 +205,7 @@ export default function ConfiguracionAdmin() {
         {activeTab === 'categories' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
                 {t('categoriesTab')}
               </h2>
               <button
@@ -215,9 +215,9 @@ export default function ConfiguracionAdmin() {
                   setShowCategoryModal(true);
                 }}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                style={{ backgroundColor: 'rgb(48,80,105)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+                style={{ backgroundColor: '#464971' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 {t('addNewCategory')}
@@ -241,7 +241,7 @@ export default function ConfiguracionAdmin() {
                         <span className="font-medium text-slate-800">{category.name}</span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-semibold" style={{ color: 'rgb(48,80,105)' }}>
+                        <span className="font-semibold" style={{ color: '#464971' }}>
                           €{category.quotaamount?.toFixed(2) || '0.00'}
                         </span>
                       </td>
@@ -254,7 +254,7 @@ export default function ConfiguracionAdmin() {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => handleEditCategory(category)}
-                            className="p-2 text-slate-600 hover:text-[rgb(48,80,105)] hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-2 text-slate-600 hover:text-[#464971] hover:bg-slate-100 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -278,15 +278,15 @@ export default function ConfiguracionAdmin() {
         {activeTab === 'lottery' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
                 {t('lotteryBenefitsDescription')}
               </h2>
               <button
                 onClick={() => setShowLotteryModal(true)}
                 className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                style={{ backgroundColor: 'rgb(48,80,105)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+                style={{ backgroundColor: '#464971' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
               >
                 <Edit2 className="w-4 h-4 mr-2" />
                 {t('editBenefits')}
@@ -294,9 +294,9 @@ export default function ConfiguracionAdmin() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-6 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
+              <div className="p-6 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgb(48,80,105)' }}>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: '#464971' }}>
                     <Ticket className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -304,14 +304,14 @@ export default function ConfiguracionAdmin() {
                     <p className="text-sm text-slate-600">{t('ordinaryLotteriesDesc')}</p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <div className="text-2xl font-bold" style={{ color: '#464971' }}>
                   €{getCurrentBenefits().ordinary_benefit.toFixed(2)}
                 </div>
               </div>
 
-              <div className="p-6 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
+              <div className="p-6 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgb(48,80,105)' }}>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: '#464971' }}>
                     <DollarSign className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -319,14 +319,14 @@ export default function ConfiguracionAdmin() {
                     <p className="text-sm text-slate-600">{t('christmasLotteryDesc')}</p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <div className="text-2xl font-bold" style={{ color: '#464971' }}>
                   €{getCurrentBenefits().christmas_benefit.toFixed(2)}
                 </div>
               </div>
 
-              <div className="p-6 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
+              <div className="p-6 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgb(48,80,105)' }}>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: '#464971' }}>
                     <DollarSign className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -334,14 +334,14 @@ export default function ConfiguracionAdmin() {
                     <p className="text-sm text-slate-600">{t('childLotteryDesc')}</p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <div className="text-2xl font-bold" style={{ color: '#464971' }}>
                   €{getCurrentBenefits().child_benefit.toFixed(2)}
                 </div>
               </div>
 
-              <div className="p-6 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
+              <div className="p-6 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgb(48,80,105)' }}>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: '#464971' }}>
                     <DollarSign className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -349,7 +349,7 @@ export default function ConfiguracionAdmin() {
                     <p className="text-sm text-slate-600">{t('hortaLotteryDesc')}</p>
                   </div>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <div className="text-2xl font-bold" style={{ color: '#464971' }}>
                   €{getCurrentBenefits().horta_benefit.toFixed(2)}
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default function ConfiguracionAdmin() {
         {activeTab === 'sections' && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <h2 className="text-xl font-bold" style={{ color: '#464971' }}>
                 {t('sectionsTab')}
               </h2>
               <p className="text-sm text-slate-600 mt-1">
@@ -386,7 +386,7 @@ export default function ConfiguracionAdmin() {
                     <button
                       onClick={() => handleToggleSection(key)}
                       className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                        enabled ? 'bg-[rgb(48,80,105)]' : 'bg-slate-300'
+                        enabled ? 'bg-[#464971]' : 'bg-slate-300'
                       }`}
                     >
                       <span
@@ -472,7 +472,7 @@ export default function ConfiguracionAdmin() {
                 <button
                   onClick={handleSaveCategory}
                   className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: 'rgb(48,80,105)' }}
+                  style={{ backgroundColor: '#464971' }}
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Guardar
@@ -559,7 +559,7 @@ export default function ConfiguracionAdmin() {
                 <button
                   onClick={handleSaveLotteryBenefits}
                   className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: 'rgb(48,80,105)' }}
+                  style={{ backgroundColor: '#464971' }}
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Guardar

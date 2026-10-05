@@ -40,7 +40,7 @@ export function LoginScreen() {
             className="w-full h-full object-contain rounded-lg"
           />
         </div>
-        <h1 className={`text-3xl font-bold text-[rgb(48,80,105)] mt-6 text-center ${fadeOut ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} transition-all duration-300`}>
+        <h1 className={`text-3xl font-bold text-[#464971] mt-6 text-center ${fadeOut ? 'opacity-0 scale-95' : 'opacity-100 scale-100'} transition-all duration-300`}>
           {t('appTitle')}
         </h1>
       </div>
@@ -168,7 +168,7 @@ export function LoginScreen() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
+                className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
               >
                 {isLoading ? 'Cargando...' : t('loginButton')}
               </button>
@@ -208,7 +208,7 @@ export function LoginScreen() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
+                className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
               >
                 {isLoading ? 'Enviando...' : 'Enviar Email de Reset'}
               </button>

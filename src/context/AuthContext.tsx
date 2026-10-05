@@ -25,6 +25,10 @@ export interface AuthUser {
 
 export interface AuthContextType {
   user: AuthUser | null;
+  realUser: AuthUser | null;
+  isImpersonating: boolean;
+  startImpersonation: (user: AuthUser) => void;
+  stopImpersonation: () => void;
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser; isFirstLogin?: boolean }>;
@@ -39,6 +43,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [impersonatedUser, setImpersonatedUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Check for existing session on mount
@@ -200,8 +205,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const changePassword = async (userId: string, newPassword: string) => {
     setLoading(true);
-    
+
     try {
+      // Durante una impersonación solo se permite cambiar la contraseña del admin real
+      if (impersonatedUser && userId !== user?.id) {
+        return { success: false, error: 'No se puede cambiar la contraseña de otro usuario' };
+      }
       console.log('Cambiando contraseña para usuario:', userId);
       
       // Hashear nueva contraseña
@@ -246,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
       setUser(null);
+      setImpersonatedUser(null);
       console.log('✅ Sesión cerrada exitosamente');
       return { success: true };
     } catch (error: any) {
@@ -298,16 +308,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const startImpersonation = (target: AuthUser) => {
+    if (!user || (user.role !== 'admin' && user.role !== 'master_admin')) return;
+    if (target.id === user.id) return;
+    if (target.role === 'admin' || target.role === 'master_admin') return;
+    setImpersonatedUser(target);
+  };
+
+  const stopImpersonation = () => {
+    setImpersonatedUser(null);
+  };
+
+  const effectiveUser = impersonatedUser ?? user;
+
   const checkPermission = (permission: string) => {
-    return hasPermission(user?.role, permission as any);
+    return hasPermission(effectiveUser?.role, permission as any);
   };
 
   const checkRouteAccess = (route: string) => {
-    return canAccessRoute(user?.role, route);
+    return canAccessRoute(effectiveUser?.role, route);
   };
 
   const value: AuthContextType = {
-    user,
+    user: effectiveUser,
+    realUser: user,
+    isImpersonating: !!impersonatedUser,
+    startImpersonation,
+    stopImpersonation,
     isAuthenticated: !!user,
     loading,
     login,

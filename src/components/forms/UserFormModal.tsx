@@ -375,7 +375,7 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
           </button>
           <button
               type="submit"
-              className="flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
+              className="flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
             >
             {userToEdit ? t('update') : t('create')}
           </button>

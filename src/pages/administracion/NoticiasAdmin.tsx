@@ -226,7 +226,7 @@ export default function NoticiasAdmin() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(48,80,105)] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#464971] mx-auto mb-4"></div>
           <p className="text-slate-600">{t('loading')}</p>
         </div>
       </div>
@@ -240,11 +240,11 @@ export default function NoticiasAdmin() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-                <FileText className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+              <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+                <FileText className="w-6 h-6" style={{ color: '#464971' }} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                   {t('newsManagement')}
                 </h1>
                 <p className="text-slate-600">
@@ -255,9 +255,9 @@ export default function NoticiasAdmin() {
             <button
               onClick={() => setShowModal(true)}
               className="inline-flex items-center px-4 py-2 text-white rounded-lg transition-colors"
-              style={{ backgroundColor: 'rgb(48,80,105)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+              style={{ backgroundColor: '#464971' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
             >
               <Plus className="w-4 h-4 mr-2" />
               {t('addNews')}
@@ -387,7 +387,7 @@ export default function NoticiasAdmin() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                   placeholder={t('newsTitlePlaceholder')}
                   required
                 />
@@ -402,7 +402,7 @@ export default function NoticiasAdmin() {
                   type="text"
                   value={formData.author}
                   onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                   placeholder={t('newsAuthorPlaceholder')}
                   required
                 />
@@ -417,7 +417,7 @@ export default function NoticiasAdmin() {
                   type="url"
                   value={formData.image_url}
                   onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                   placeholder={t('newsImagePlaceholder')}
                 />
               </div>
@@ -442,7 +442,7 @@ export default function NoticiasAdmin() {
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as 'draft' | 'published' | 'hidden' })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[rgb(48,80,105)] focus:border-transparent"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#464971] focus:border-transparent"
                 >
                   <option value="draft">{t('newsDraft')}</option>
                   <option value="published">{t('newsPublished')}</option>
@@ -462,9 +462,9 @@ export default function NoticiasAdmin() {
                 <button
                   type="submit"
                   className="px-4 py-2 text-white rounded-lg transition-colors"
-                  style={{ backgroundColor: 'rgb(48,80,105)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgb(38,70,95)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgb(48,80,105)'}
+                  style={{ backgroundColor: '#464971' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3b3d5e'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#464971'}
                 >
                   {editingNews ? t('editNews') : t('createNews')}
                 </button>

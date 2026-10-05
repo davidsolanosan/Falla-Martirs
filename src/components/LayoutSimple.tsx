@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package, UserCog } from 'lucide-react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../lib/permissions';
@@ -117,7 +117,8 @@ const getNavItems = (role: string | undefined, t: any) => {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { user, realUser, isImpersonating, stopImpersonation, logout } = useAuth();
   const { user: supabaseUser } = useSupabase(); // Para datos adicionales si es necesario
   const { t, language, setLanguage } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -222,7 +223,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <Globe className="w-4 h-4 text-slate-400" />
             <select 
               value={language} 
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => setLanguage(e.target.value as 'es' | 'va')}
               className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="va">🇪🇸 Valencià</option>
@@ -241,6 +242,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto">
+        {isImpersonating && (
+          <div className="sticky top-0 z-40 bg-amber-400 text-amber-950 px-4 py-2.5 flex items-center justify-between shadow-md">
+            <div className="flex items-center space-x-2 text-sm font-medium">
+              <UserCog className="w-4 h-4" />
+              <span>{t('actingAs')} <strong>{user?.name} {user?.surname}</strong></span>
+            </div>
+            <button
+              onClick={() => {
+                stopImpersonation();
+                navigate('/');
+              }}
+              className="text-xs font-semibold bg-amber-900 text-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-800 transition-colors"
+            >
+              {t('backToMyAccount')}
+            </button>
+          </div>
+        )}
         <div className="max-w-[1600px] w-full mx-auto p-4 md:p-8">
           {children}
         </div>

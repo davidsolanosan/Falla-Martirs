@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+/* Paleta de marca Falla Màrtirs — los azules/indigos de Tailwind se retintean a #464971 */
+@theme {
+  --color-blue-50: #f2f2f7;
+  --color-blue-100: #e6e6ee;
+  --color-blue-200: #cfcfdd;
+  --color-blue-300: #adadc4;
+  --color-blue-400: #8385a6;
+  --color-blue-500: #5d6084;
+  --color-blue-600: #464971;
+  --color-blue-700: #3b3d5e;
+  --color-blue-800: #2f314b;
+  --color-blue-900: #252639;
+  --color-blue-950: #171824;
+  --color-indigo-50: #f2f2f7;
+  --color-indigo-100: #e6e6ee;
+  --color-indigo-200: #cfcfdd;
+  --color-indigo-300: #adadc4;
+  --color-indigo-400: #8385a6;
+  --color-indigo-500: #5d6084;
+  --color-indigo-600: #464971;
+  --color-indigo-700: #3b3d5e;
+  --color-indigo-800: #2f314b;
+  --color-indigo-900: #252639;
+  --color-indigo-950: #171824;
+}
+
 /* Estilos adicionales para Falla Martirs */
 body {
   margin: 0;

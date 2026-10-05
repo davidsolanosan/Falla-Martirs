@@ -134,7 +134,7 @@ export function FamilyQuotaModal({
             </div>
             <div>
               <span className="text-slate-500">Total a pagar:</span>
-              <p className="font-semibold text-lg text-[rgb(48,80,105)]">€{(familyTotal.totalAmount + eventsTotalCost).toFixed(2)}</p>
+              <p className="font-semibold text-lg text-[#464971]">€{(familyTotal.totalAmount + eventsTotalCost).toFixed(2)}</p>
             </div>
             <div>
               <span className="text-slate-500">Total papeletas:</span>
@@ -149,7 +149,7 @@ export function FamilyQuotaModal({
             <button
               type="button"
               onClick={() => setEventsExpanded(!eventsExpanded)}
-              className="w-full px-6 py-4 flex items-center justify-between bg-[rgb(48,80,105)] text-white hover:bg-[rgb(48,80,105)]/90 transition-colors"
+              className="w-full px-6 py-4 flex items-center justify-between bg-[#464971] text-white hover:bg-[#464971]/90 transition-colors"
             >
               <div className="flex items-center space-x-3">
                 <Calendar className="w-5 h-5" />
@@ -225,7 +225,7 @@ export function FamilyQuotaModal({
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <span className="font-bold text-lg text-[rgb(48,80,105)]">
+                          <span className="font-bold text-lg text-[#464971]">
                             €{eventsTotalCost.toFixed(2)}
                           </span>
                         </td>

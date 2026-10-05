@@ -31,7 +31,7 @@ export default function SectionGate({ section, children }: SectionGateProps) {
           <div className="p-4 rounded-full bg-amber-50 w-fit mx-auto mb-4">
             <Hammer className="w-10 h-10 text-amber-500" />
           </div>
-          <h1 className="text-2xl font-bold mb-3" style={{ color: 'rgb(48,80,105)' }}>
+          <h1 className="text-2xl font-bold mb-3" style={{ color: '#464971' }}>
             {t('sectionUnderConstruction')}
           </h1>
           <p className="text-slate-600">

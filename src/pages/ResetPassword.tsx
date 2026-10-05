@@ -156,7 +156,7 @@ export default function ResetPassword() {
           <p className="text-slate-600 mb-6">{error}</p>
           <button
             onClick={() => navigate('/login')}
-            className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
+            className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm"
           >
             Volver al Login
           </button>
@@ -267,7 +267,7 @@ export default function ResetPassword() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
+            className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
           >
             {isLoading ? 'Reseteando...' : 'Resetear Contraseña'}
           </button>

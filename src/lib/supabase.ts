@@ -29,6 +29,8 @@ export interface User {
   correu?: string;
   cargo?: string;
   recompensa?: string;
+  tutor?: string;
+  telefon_tutor?: string;
   // Campos de autenticación
   password_hash?: string;
   first_login?: boolean;

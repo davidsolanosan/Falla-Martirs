@@ -216,8 +216,8 @@ export default function LoteriasAdmin() {
       const day = date.getDate();
       
       // Usar traducciones de meses del i18n
-      const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 
-                        'july', 'august', 'september', 'october', 'november', 'december'];
+      const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june',
+                        'july', 'august', 'september', 'october', 'november', 'december'] as const;
       const month = t(monthKeys[date.getMonth()]);
       const year = date.getFullYear();
       
@@ -232,8 +232,8 @@ export default function LoteriasAdmin() {
     const months: { [key: string]: LotteryDate[] } = {};
     
     // Usar traducciones de meses del i18n
-    const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june', 
-                      'july', 'august', 'september', 'october', 'november', 'december'];
+    const monthKeys = ['january', 'february', 'march', 'april', 'may', 'june',
+                      'july', 'august', 'september', 'october', 'november', 'december'] as const;
     const monthNames = monthKeys.map(key => t(key));
     
     lotteries.forEach(lottery => {
@@ -298,8 +298,8 @@ export default function LoteriasAdmin() {
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
-              <CurrencyDollarIcon className="h-8 w-8 mr-3" style={{color: 'rgb(48,80,105)'}} />
-              <h1 className="text-3xl font-bold" style={{color: 'rgb(48,80,105)'}}>
+              <CurrencyDollarIcon className="h-8 w-8 mr-3" style={{color: '#464971'}} />
+              <h1 className="text-3xl font-bold" style={{color: '#464971'}}>
                 {t('lottery_admin_title')}
               </h1>
             </div>
@@ -308,7 +308,7 @@ export default function LoteriasAdmin() {
                 resetForm();
                 setShowForm(true);
               }}
-              className="inline-flex items-center px-3 py-1.5 bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] rounded-xl hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+              className="inline-flex items-center px-3 py-1.5 bg-white text-[#464971] border-3 border-[#464971] rounded-xl hover:bg-[#464971] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               {t('lottery_new_lottery')}
@@ -592,12 +592,12 @@ export default function LoteriasAdmin() {
 
           {lotteryDates.length === 0 && (
             <div className="text-center py-12">
-              <CurrencyDollarIcon className="h-16 w-16 mx-auto mb-4" style={{color: 'rgb(48,80,105)'}} />
+              <CurrencyDollarIcon className="h-16 w-16 mx-auto mb-4" style={{color: '#464971'}} />
               <h3 className="text-xl font-semibold text-black mb-2">
-                {t('lottery.no_lotteries')}
+                {t('lottery_no_lotteries')}
               </h3>
               <p className="text-black">
-                {t('lottery.no_lotteries_admin_desc')}
+                {t('lottery_no_lotteries_admin_desc')}
               </p>
             </div>
           )}

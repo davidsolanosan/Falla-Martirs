@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Eventos() {
-  const { user } = useAuth();
+  const { user, realUser } = useAuth();
   const { t, language } = useTranslation();
   const navigate = useNavigate();
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -178,7 +178,7 @@ export default function Eventos() {
           includes_meal: includesMeal,
           meal_option_id: mealOptionId || null,
           total_price: calculatedPrice,
-          registered_by: user?.id || '',
+          registered_by: realUser?.id || user?.id || '',
           registered_at: new Date().toISOString()
         });
       }
@@ -464,7 +464,7 @@ export default function Eventos() {
                   
                   return (
                     <div key={member.id} className={`border rounded-xl p-4 transition-colors ${
-                      selectedMembers.includes(member.id) ? 'bg-[rgb(48,80,105)]/10 border-[rgb(48,80,105)]/20' : 'hover:bg-slate-50'
+                      selectedMembers.includes(member.id) ? 'bg-[#464971]/10 border-[#464971]/20' : 'hover:bg-slate-50'
                     }`}>
                       <div className="flex items-center">
                         <input
@@ -478,8 +478,8 @@ export default function Eventos() {
                             deadlinePassed
                               ? 'text-gray-300 cursor-not-allowed bg-gray-100 border-gray-300'
                               : selectedMembers.includes(member.id)
-                                ? 'text-white bg-[rgb(48,80,105)] border-[rgb(48,80,105)]'
-                                : 'text-[rgb(48,80,105)] bg-white border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)]/5'
+                                ? 'text-white bg-[#464971] border-[#464971]'
+                                : 'text-[#464971] bg-white border-[#464971] hover:bg-[#464971]/5'
                           }`}
                         />
                         <div className="flex-1">
@@ -497,7 +497,7 @@ export default function Eventos() {
                           value={memberMealOptions[member.id] ?? ''}
                           onChange={(e) => setMemberMealOptions(prev => ({ ...prev, [member.id]: e.target.value || null }))}
                           disabled={deadlinePassed}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[rgb(48,80,105)] disabled:opacity-50"
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#464971] disabled:opacity-50"
                         >
                           <option value="">{t('withoutMeal')}</option>
                           {mealOptionsForEvent.map(o => (
@@ -513,9 +513,9 @@ export default function Eventos() {
                               type="checkbox"
                               checked={memberMeals[member.id] || false}
                               onChange={() => handleMealToggle(member.id)}
-                              className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[rgb(48,80,105)] ${
+                              className={`mr-3 h-4 w-4 rounded focus:ring-2 focus:ring-[#464971] ${
                                 memberMeals[member.id]
-                                  ? 'text-[rgb(48,80,105)] bg-[rgb(48,80,105)]'
+                                  ? 'text-[#464971] bg-[#464971]'
                                   : 'text-slate-600 bg-white border-slate-300'
                               }`}
                             />
@@ -584,20 +584,20 @@ export default function Eventos() {
                   }
                 </p>
               </div>
-              <span className="text-2xl font-bold text-[rgb(48,80,105)]">{calculateTotal()} €</span>
+              <span className="text-2xl font-bold text-[#464971]">{calculateTotal()} €</span>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-3 border-3 border-[rgb(48,80,105)] text-[rgb(48,80,105)] rounded-xl font-medium hover:bg-slate-50 transition-all"
+                className="flex-1 px-4 py-3 border-3 border-[#464971] text-[#464971] rounded-xl font-medium hover:bg-slate-50 transition-all"
               >
                 {t('cancel')}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || deadlinePassed}
-                className="flex-1 px-4 py-3 bg-[rgb(48,80,105)] text-white rounded-xl font-medium hover:bg-[rgb(48,80,105)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex-1 px-4 py-3 bg-[#464971] text-white rounded-xl font-medium hover:bg-[#464971] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
                 {isSubmitting ? t('saving') : t('save')}
               </button>
@@ -628,7 +628,7 @@ export default function Eventos() {
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-r-2 border-t-2 border-[rgb(48,80,105)]"></div>
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-r-2 border-t-2 border-[#464971]"></div>
             <p className="mt-2 text-gray-600">{t('loading')}</p>
           </div>
         </div>
@@ -744,17 +744,17 @@ export default function Eventos() {
                       className={`text-sm font-medium px-4 py-2 rounded-xl transition-all w-full sm:w-auto ${
                         isRegistrationDeadlinePassed(event)
                           ? 'text-slate-400 bg-slate-100 cursor-not-allowed opacity-50'
-                          : 'text-white bg-[rgb(48,80,105)] hover:bg-white hover:text-[rgb(48,80,105)]'
+                          : 'text-white bg-[#464971] hover:bg-white hover:text-[#464971]'
                       }`}
                     >
                       {isRegistrationDeadlinePassed(event) ? t('registrationClosed') : t('join')}
                     </button>
                   ) : (
                     <div className="relative group w-full sm:w-auto">
-                      <button disabled className="text-sm font-medium text-[rgb(48,80,105)] bg-white border-3 border-[rgb(48,80,105)] px-4 py-2 rounded-xl cursor-not-allowed opacity-75 w-full sm:w-auto">
+                      <button disabled className="text-sm font-medium text-[#464971] bg-white border-3 border-[#464971] px-4 py-2 rounded-xl cursor-not-allowed opacity-75 w-full sm:w-auto">
                         {t('join')}
                       </button>
-                      <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-[rgb(48,80,105)] text-white text-xs rounded-xl text-center z-10 shadow-lg hidden group-hover:block">
+                      <div className="absolute bottom-full mb-2 right-0 w-48 p-2 bg-[#464971] text-white text-xs rounded-xl text-center z-10 shadow-lg hidden group-hover:block">
                         {t('loginToViewEvents')}
                       </div>
                     </div>

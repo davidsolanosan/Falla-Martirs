@@ -25,7 +25,7 @@ export default function Noticias() {
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           // Resaltar temporalmente la noticia
-          element.style.border = '2px solid rgb(59, 130, 246)';
+          element.style.border = '2px solid #5d6084';
           element.style.boxShadow = '0 0 0 10px rgba(59, 130, 246, 0.3)';
           setTimeout(() => {
             element.style.border = '';
@@ -121,6 +121,27 @@ export default function Noticias() {
     }
   };
 
+  const handleMarkAsUnread = async (newsId: string) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from('news_read')
+        .delete()
+        .eq('news_id', newsId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking news as unread:', error);
+        return;
+      }
+
+      setReadNews(readNews.filter(id => id !== newsId));
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
   const unreadNews = news.filter(n => n.status === 'published' && !readNews.includes(n.id));
   const readNewsList = news.filter(n => n.status === 'published' && readNews.includes(n.id));
 
@@ -184,10 +205,14 @@ export default function Noticias() {
           </div>
           
           {isRead && (
-            <div className="flex items-center text-sm text-slate-500">
+            <button
+              onClick={() => handleMarkAsUnread(newsItem.id)}
+              className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 hover:text-slate-700 transition-colors"
+              title={t('markAsUnread')}
+            >
               <Check className="w-4 h-4 mr-1" />
-              {t('readNews')}
-            </div>
+              {t('markAsUnread')}
+            </button>
           )}
         </div>
       </div>
@@ -198,7 +223,7 @@ export default function Noticias() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(48,80,105)] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#464971] mx-auto mb-4"></div>
           <p className="text-slate-600">{t('loading')}</p>
         </div>
       </div>
@@ -212,11 +237,11 @@ export default function Noticias() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-                <FileText className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+              <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+                <FileText className="w-6 h-6" style={{ color: '#464971' }} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+                <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                   {t('navNews')}
                 </h1>
                 <p className="text-slate-600">

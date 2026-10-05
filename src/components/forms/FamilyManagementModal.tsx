@@ -243,14 +243,14 @@ function FamilyManagementModal({
           <button
             type="button"
             onClick={handleCloseModal}
-            className="inline-flex items-center px-4 py-2 bg-white text-[rgb(48,80,105)] border-2 border-[rgb(48,80,105)] rounded-lg hover:bg-[rgb(48,80,105)] hover:text-white focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+            className="inline-flex items-center px-4 py-2 bg-white text-[#464971] border-2 border-[#464971] rounded-lg hover:bg-[#464971] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
           >
             {t('cancel')}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
-            className="inline-flex items-center px-4 py-2 bg-[rgb(48,80,105)] text-white border-2 border-[rgb(48,80,105)] rounded-lg hover:bg-[rgb(48,80,105)] focus:outline-none focus:ring-2 focus:ring-[rgb(48,80,105)] focus:ring-offset-2 transition-all text-sm font-medium"
+            className="inline-flex items-center px-4 py-2 bg-[#464971] text-white border-2 border-[#464971] rounded-lg hover:bg-[#464971] focus:outline-none focus:ring-2 focus:ring-[#464971] focus:ring-offset-2 transition-all text-sm font-medium"
           >
             {t('save')}
           </button>

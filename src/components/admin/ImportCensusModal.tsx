@@ -530,7 +530,7 @@ function processBirthYear(rawValue: any): string {
               type="button"
               onClick={handleImport}
               disabled={!file || isUploading}
-              className="w-full flex items-center justify-center bg-white text-[rgb(48,80,105)] border-3 border-[rgb(48,80,105)] hover:bg-[rgb(48,80,105)] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
+              className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
             >
               {isUploading ? (
                 <div className="flex items-center gap-2">

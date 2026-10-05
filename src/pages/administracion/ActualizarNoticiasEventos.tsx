@@ -98,11 +98,11 @@ export default function ActualizarNoticiasEventos() {
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="flex items-center space-x-3">
-            <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgb(239,246,255)' }}>
-              <FileText className="w-6 h-6" style={{ color: 'rgb(48,80,105)' }} />
+            <div className="p-3 rounded-xl" style={{ backgroundColor: '#f2f2f7' }}>
+              <FileText className="w-6 h-6" style={{ color: '#464971' }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: 'rgb(48,80,105)' }}>
+              <h1 className="text-2xl font-bold" style={{ color: '#464971' }}>
                 Actualizar Noticias de Eventos
               </h1>
               <p className="text-slate-600">
@@ -158,7 +158,7 @@ export default function ActualizarNoticiasEventos() {
           <button
             onClick={updateAllEventNews}
             disabled={loading || processing}
-            className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-[rgb(48,80,105)] text-white rounded-xl hover:bg-[rgb(38,70,95)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center space-x-3 px-6 py-3 bg-[#464971] text-white rounded-xl hover:bg-[#3b3d5e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
@@ -182,7 +182,7 @@ export default function ActualizarNoticiasEventos() {
               </div>
               <div className="w-full bg-slate-200 rounded-full h-2">
                 <div 
-                  className="bg-[rgb(48,80,105)] h-2 rounded-full transition-all duration-300"
+                  className="bg-[#464971] h-2 rounded-full transition-all duration-300"
                   style={{ 
                     width: `${results.total > 0 ? ((results.success + results.error) / results.total) * 100 : 0}%` 
                   }}
