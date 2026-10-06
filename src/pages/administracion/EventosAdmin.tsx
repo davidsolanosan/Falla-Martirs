@@ -72,11 +72,18 @@ export default function EventosAdmin() {
   // Función para generar noticia automáticamente
   const generateEventNews = async (event: any) => {
     try {
+      const fmtDate = (d?: string) => {
+        if (!d) return 'Per determinar';
+        const date = new Date(d);
+        if (isNaN(date.getTime())) return d;
+        return `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+      };
+
       const newsContent = `
         <h2>📅 ${event.title}</h2>
         
         <h3>📋 Detalls de l'Esdeveniment:</h3>
-        <p><strong>Data:</strong> ${event.event_date}</p>
+        <p><strong>Data:</strong> ${fmtDate(event.event_date)}</p>
         <p><strong>Hora:</strong> ${event.time || 'Per determinar'}</p>
         <p><strong>Lloc:</strong> ${event.site || 'Per determinar'}</p>
         <p><strong>Preu:</strong> Veure preus per categoria</p>
@@ -90,12 +97,12 @@ export default function EventosAdmin() {
         <br><br>
         
         <h3>📅 Informació d'Inscripció:</h3>
-        <p><strong>Data límit:</strong> ${event.registration_deadline}</p>
+        <p><strong>Data límit:</strong> ${fmtDate(event.registration_deadline)}</p>
         <p><strong>Estat:</strong> ${event.is_active ? 'Actiu' : 'Inactiu'}</p>
         
         <br><br>
         
-        <p><em>Per inscriure-te, visita la secció d'Events.</em></p>
+        <p><em>Per inscriure-te, visita la secció d'Esdeveniments.</em></p>
       `;
 
       const newsData = {
