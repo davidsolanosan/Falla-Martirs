@@ -7,7 +7,7 @@ import { useTranslation } from '../../lib/i18n';
 
 
 export function LoginScreen() {
-  const { login, resetPassword } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
   
@@ -70,29 +70,6 @@ export function LoginScreen() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError('Ocurrió un error. Por favor, inténtalo de nuevo.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setInfo('');
-    setIsLoading(true);
-    
-    try {
-      const result = await resetPassword(email);
-      
-      if (result.success) {
-        setInfo('Se ha enviado un email con instrucciones para resetear tu contraseña.');
-        setShowReset(false);
-      } else {
-        setError(result.error || 'Error al resetear contraseña');
-      }
-    } catch (err: any) {
-      console.error("Reset error:", err);
       setError('Ocurrió un error. Por favor, inténtalo de nuevo.');
     } finally {
       setIsLoading(false);
@@ -187,32 +164,14 @@ export function LoginScreen() {
           </>
         ) : (
           <>
-            <form onSubmit={handleResetPassword} className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-400" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-500 bg-slate-50"
-                    placeholder="tu@email.com"
-                  />
-                </div>
+            <div className="space-y-4 mb-6">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700">
+                {t('contactAdminForReset')}
               </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center bg-white text-[#464971] border-3 border-[#464971] hover:bg-[#464971] hover:text-white px-3 py-1.5 rounded-xl font-medium transition-all shadow-sm text-sm disabled:opacity-50"
-              >
-                {isLoading ? 'Enviando...' : 'Enviar Email de Reset'}
-              </button>
-            </form>
+              <p className="text-xs text-slate-500">
+                {t('resetFallbackInfo')}
+              </p>
+            </div>
 
             <div className="text-center">
               <button
