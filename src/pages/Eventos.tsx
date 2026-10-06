@@ -122,11 +122,8 @@ export default function Eventos() {
       const eventPricesForEvent = await fetchEventPricesForEvent(event.id);
       console.log('🔍 Precios del evento:', eventPricesForEvent);
 
-      if (eventPricesForEvent.length === 0) {
-        console.error('❌ No hay precios configurados para este evento');
-        alert(t('noEventPrices'));
-        return;
-      }
+      // Evento sin precios configurados = evento gratuito (inscripción a 0€)
+      const isFreeEvent = eventPricesForEvent.length === 0;
 
       for (const memberId of memberIds) {
         // Obtener categoría del miembro
@@ -141,26 +138,29 @@ export default function Eventos() {
           continue;
         }
         
-        // Buscar precio para la categoría específica
-        let eventPrice = eventPricesForEvent.find(p => p.category_id === categoryId);
         let finalCategoryId = categoryId;
         
-        if (!eventPrice) {
-          console.warn('⚠️ No hay precio para la categoría específica, usando primera disponible');
-          // Usar la primera categoría disponible como por defecto
-          const defaultCategory = eventPricesForEvent[0]?.category_id;
-          if (!defaultCategory) {
-            console.error('❌ No hay categorías disponibles para este evento');
-            alert(t('noEventCategories'));
-            continue;
-          }
+        if (!isFreeEvent) {
+          // Buscar precio para la categoría específica
+          const eventPrice = eventPricesForEvent.find(p => p.category_id === categoryId);
           
-          finalCategoryId = defaultCategory;
-          console.log('🔧 Usando categoría por defecto:', finalCategoryId);
+          if (!eventPrice) {
+            console.warn('⚠️ No hay precio para la categoría específica, usando primera disponible');
+            // Usar la primera categoría disponible como por defecto
+            const defaultCategory = eventPricesForEvent[0]?.category_id;
+            if (!defaultCategory) {
+              console.error('❌ No hay categorías disponibles para este evento');
+              alert(t('noEventCategories'));
+              continue;
+            }
+            
+            finalCategoryId = defaultCategory;
+            console.log('🔧 Usando categoría por defecto:', finalCategoryId);
+          }
         }
         
         // Calcular el precio: categoría + suplemento de la opción elegida
-        const finalEventPrice = eventPricesForEvent.find(p => p.category_id === finalCategoryId);
+        const finalEventPrice = isFreeEvent ? null : eventPricesForEvent.find(p => p.category_id === finalCategoryId);
 
         const chosenOption = mealOptionId
           ? eventMealOptions.find(o => o.id === mealOptionId)

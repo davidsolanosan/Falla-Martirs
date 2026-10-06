@@ -354,6 +354,30 @@ export default function EventosAdmin() {
     return registrations.reduce((total: number, reg: any) => total + (reg.total_price || 0), 0);
   };
 
+  // Agrupa categorías: Infantil (infantil+bebé) vs Adulto (juvenil+adulto+jubilado+resto)
+  const getAgeGroup = (categoryId: string): 'adult' | 'child' => {
+    const cat = categories.find((c: any) => c.id === categoryId);
+    const name = (cat?.name || '').toLowerCase();
+    return (name.includes('infantil') || name.includes('bebé') || name.includes('bebe')) ? 'child' : 'adult';
+  };
+
+  const getGroupStats = (eventId: string) => {
+    const registrations = getEventRegistrations(eventId);
+    const stats = {
+      adult: { M: 0, F: 0, other: 0 },
+      child: { M: 0, F: 0, other: 0 }
+    };
+    registrations.forEach((reg: any) => {
+      const group = getAgeGroup(reg.category_id);
+      const u = users.find((x: any) => x.id === reg.user_id);
+      const s = (u?.sexo || '').toUpperCase();
+      if (s === 'M') stats[group].M++;
+      else if (s === 'F') stats[group].F++;
+      else stats[group].other++;
+    });
+    return stats;
+  };
+
   const getMealStats = (eventId: string) => {
     const registrations = getEventRegistrations(eventId);
     const withMeal = registrations.filter((reg: any) => reg.includes_meal).length;
@@ -392,6 +416,8 @@ export default function EventosAdmin() {
         'Nombre usuario': `${user?.name || ''} ${user?.surname || ''}`.trim(),
         'Familia': family?.name || '',
         'Categoría': category?.name || '',
+        'Grupo': t(getAgeGroup(reg.category_id)),
+        'Sexo': (user?.sexo || '').toUpperCase() === 'M' ? t('male') : (user?.sexo || '').toUpperCase() === 'F' ? t('female') : t('unknownSex'),
         'Precio final': `€${reg.total_price || 0}`,
         'Comida': reg.includes_meal ? 'Sí' : 'No',
         'Opción de menú': mealOption?.name || ''
@@ -586,6 +612,31 @@ export default function EventosAdmin() {
                               {getEventRegistrations(event.id).length} {t('people')}
                             </span>
                           </div>
+
+                          {/* Resumen agrupado: Adulto (juvenil+adulto+jubilado) vs Infantil (infantil+bebé) */}
+                          {getEventRegistrations(event.id).length > 0 && (() => {
+                            const gs = getGroupStats(event.id);
+                            const groupRow = (label: string, s: { M: number; F: number; other: number }) => (
+                              <div key={label} className="p-3 bg-slate-50 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-slate-700">{label}</span>
+                                  <span className="text-sm font-bold text-slate-800">{s.M + s.F + s.other} {t('people')}</span>
+                                </div>
+                                <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                                  <span>{t('male')}: {s.M}</span>
+                                  <span>{t('female')}: {s.F}</span>
+                                  {s.other > 0 && <span>{t('unknownSex')}: {s.other}</span>}
+                                </div>
+                              </div>
+                            );
+                            return (
+                              <div className="space-y-2 mt-3 pt-3 border-t border-slate-200">
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('byAgeGroup')}</p>
+                                {groupRow(t('adult'), gs.adult)}
+                                {groupRow(t('child'), gs.child)}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
