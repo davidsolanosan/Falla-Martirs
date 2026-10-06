@@ -12,7 +12,8 @@ import { MasterAdminInit } from '../components/admin/MasterAdminInit';
 import { Modal } from '../components/ui/Modal';
 import FamilyManagementModal from '../components/forms/FamilyManagementModal';
 import { AutoFamilyGenerator } from '../components/forms/AutoFamilyGenerator';
-import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash, Users as UsersIcon, UserCog } from 'lucide-react';
+import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash, Users as UsersIcon, UserCog, KeyRound } from 'lucide-react';
+import { appConfirm, appToast } from '../components/ui/AppFeedback';
 import { useNavigate } from 'react-router-dom';
 import { Category } from '../lib/supabase';
 
@@ -243,6 +244,24 @@ export default function Censo() {
   };
 
   
+  const handleResetPassword = async (target: any) => {
+    if (!(await appConfirm(`${t('confirmResetPassword')} ${target.name} ${target.surname || ''}?`))) return;
+
+    try {
+      await updateUser(target.id, {
+        password_hash: null,
+        first_login: true,
+        has_temp_password: true,
+        password_reset_token: null,
+        password_reset_expires: null
+      });
+      appToast(t('passwordResetSuccess'), 'success');
+    } catch (error) {
+      console.error('Error restableciendo contraseña:', error);
+      appToast(t('errorResettingPassword'), 'error');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteConfirm) return;
     
@@ -620,6 +639,16 @@ export default function Censo() {
                                   <UserCog className="h-4 w-4" />
                                 </button>
                               )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleResetPassword(user);
+                                }}
+                                className="text-slate-500 hover:text-slate-700 p-1 rounded hover:bg-slate-100"
+                                title={t('resetUserPassword')}
+                              >
+                                <KeyRound className="h-4 w-4" />
+                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

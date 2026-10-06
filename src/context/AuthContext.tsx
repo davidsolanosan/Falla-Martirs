@@ -222,14 +222,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .update({
           password_hash: passwordHash,
           first_login: false,
+          has_temp_password: false,
           password_changed_at: new Date().toISOString()
         })
         .eq('id', userId);
 
       if (error) throw error;
-      
+
       console.log('✅ Contraseña cambiada correctamente');
-      
+
       // Actualizar usuario en el contexto si es el usuario actual
       if (user && user.id === userId) {
         setUser({
@@ -271,36 +272,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      // Obtener usuario - SOLO CAMPOS DE USERS
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
+      // El token se genera y el email se envía del lado servidor (Edge Function)
+      const { data, error } = await supabase.functions.invoke('send-reset-email', {
+        body: { email: email.toLowerCase(), appUrl: window.location.origin }
+      });
 
-      if (error || !userData) {
-        return { success: false, error: 'Usuario no encontrado' };
+      if (error || !data?.success) {
+        return { success: false, error: data?.error || 'Error al resetear contraseña' };
       }
-
-      // Generar token de reset
-      const resetToken = generateResetToken();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
-
-      // Actualizar usuario con token
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          password_reset_token: resetToken,
-          password_reset_expires: expiresAt.toISOString()
-        })
-        .eq('id', userData.id);
-
-      if (updateError) {
-        return { success: false, error: 'Error generando token de reset' };
-      }
-
-      // TODO: Enviar email con token (implementar servicio de email)
-      console.log('Token de reset generado:', resetToken);
 
       return { success: true };
     } catch (error: any) {

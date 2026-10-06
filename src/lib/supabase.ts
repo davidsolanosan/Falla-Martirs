@@ -32,9 +32,12 @@ export interface User {
   tutor?: string;
   telefon_tutor?: string;
   // Campos de autenticación
-  password_hash?: string;
+  password_hash?: string | null;
   first_login?: boolean;
+  has_temp_password?: boolean;
   password_changed_at?: string;
+  password_reset_token?: string | null;
+  password_reset_expires?: string | null;
   created_at: string;
   updated_at: string;
 }

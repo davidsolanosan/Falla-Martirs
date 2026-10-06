@@ -1358,12 +1358,13 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         .update({
           password_hash: passwordHash,
           first_login: false,
+          has_temp_password: false,
           password_changed_at: new Date().toISOString()
         })
         .eq('id', userId);
 
       if (error) throw error;
-      
+
       // Actualizar estado local
       await refreshUsers();
     } catch (err) {

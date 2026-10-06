@@ -30,6 +30,14 @@ export function appConfirm(message: string): Promise<boolean> {
   return Promise.resolve(window.confirm(message));
 }
 
+export function appToast(message: string, type: ToastType = 'info') {
+  if (pushToast) {
+    pushToast(message, type);
+  } else {
+    window.alert(message);
+  }
+}
+
 /**
  * Host global de toasts y diálogos de confirmación.
  * Sustituye window.alert por un toast con la marca de la app,

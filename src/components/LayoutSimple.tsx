@@ -235,7 +235,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => logout()}
             className="w-full text-xs text-slate-600 hover:text-slate-900 font-medium px-2 py-1.5"
           >
-            Cerrar sesión
+            {t('signOut')}
           </button>
         </div>
       </aside>
@@ -275,11 +275,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50" style={{ backgroundColor: 'rgba(71, 85, 105, 0.4)' }} onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="fixed left-0 top-0 h-full w-64 bg-white bg-opacity-95 shadow-xl">
+          <div className="fixed left-0 top-0 h-full w-64 bg-white bg-opacity-95 shadow-xl flex flex-col">
             <div className="p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold text-indigo-600">{t('appTitle')}</h2>
             </div>
-            <nav className="p-4 space-y-2">
+            <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 
@@ -333,6 +333,40 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 );
               })}
             </nav>
+
+            <div className="p-4 border-t border-slate-200 bg-white">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white font-semibold">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 mb-3">
+                <Globe className="w-4 h-4 text-slate-400" />
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as 'es' | 'va')}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="va">🇪🇸 Valencià</option>
+                  <option value="es">🇪🇸 Castellano</option>
+                </select>
+              </div>
+
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  logout();
+                }}
+                className="w-full text-xs text-slate-600 hover:text-slate-900 font-medium px-2 py-1.5 text-left"
+              >
+                {t('signOut')}
+              </button>
+            </div>
           </div>
         </div>
       )}
