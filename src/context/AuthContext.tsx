@@ -44,40 +44,58 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [impersonatedUser, setImpersonatedUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
+  const toAuthUser = (userData: any): AuthUser => ({
+    id: userData.id,
+    authId: userData.id,
+    email: userData.email,
+    name: userData.name,
+    surname: userData.surname,
+    role: userData.role as Role,
+    has_temp_password: userData.has_temp_password,
+    first_login: userData.first_login,
+    dni: userData.dni,
+    birth_year: userData.birth_year,
+    family_id: userData.family_id
+  });
+
+  // Restaurar sesión al cargar (auth custom sobre tabla users → persistimos en localStorage)
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          // Obtener datos del usuario desde la tabla users
-          const { data: userData, error } = await supabase
+        const savedUserId = localStorage.getItem('falla_session_user');
+        if (!savedUserId) return;
+
+        // Revalidar contra la BD por si el usuario fue eliminado o cambió
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', savedUserId)
+          .single();
+
+        if (error || !userData) {
+          localStorage.removeItem('falla_session_user');
+          localStorage.removeItem('falla_session_impersonated');
+          return;
+        }
+
+        const authUser = toAuthUser(userData);
+        setUser(authUser);
+
+        // Restaurar impersonación si el usuario real sigue siendo admin
+        const savedImpersonatedId = localStorage.getItem('falla_session_impersonated');
+        if (savedImpersonatedId && (authUser.role === 'admin' || authUser.role === 'master_admin')) {
+          const { data: targetData } = await supabase
             .from('users')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', savedImpersonatedId)
             .single();
 
-          if (error) {
-            console.error('Error loading user data:', error);
-            return;
-          }
-
-          if (userData) {
-            setUser({
-              id: userData.id,
-              authId: session.user.id, // ID de autenticación de Supabase
-              email: userData.email,
-              name: userData.name,
-              surname: userData.surname,
-              role: userData.role as Role,
-              has_temp_password: userData.has_temp_password,
-              first_login: userData.first_login,
-              dni: userData.dni,
-              birth_year: userData.birth_year
-            });
+          if (targetData && targetData.role !== 'admin' && targetData.role !== 'master_admin' && targetData.id !== authUser.id) {
+            setImpersonatedUser(toAuthUser(targetData));
+          } else {
+            localStorage.removeItem('falla_session_impersonated');
           }
         }
       } catch (error) {
@@ -174,21 +192,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Establecer usuario en el contexto
-      const authUser = {
-        id: userData.id,
-        authId: userData.id, // Por ahora usar el mismo ID (se actualizará con la sesión)
-        email: userData.email,
-        name: userData.name,
-        surname: userData.surname,
-        role: userData.role as Role,
-        has_temp_password: userData.has_temp_password,
-        first_login: userData.first_login,
-        dni: userData.dni,
-        birth_year: userData.birth_year,
-        family_id: userData.family_id
-      };
+      const authUser = toAuthUser(userData);
 
       setUser(authUser);
+      localStorage.setItem('falla_session_user', authUser.id);
 
       return { 
         success: true, 
@@ -254,14 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     
     try {
-      await supabase.auth.signOut();
       setUser(null);
       setImpersonatedUser(null);
+      localStorage.removeItem('falla_session_user');
+      localStorage.removeItem('falla_session_impersonated');
       console.log('✅ Sesión cerrada exitosamente');
       return { success: true };
     } catch (error: any) {
-      console.error('❌ Error en logout de Supabase Auth:', error);
-      // Continuar aunque falle el logout de Supabase
+      console.error('❌ Error en logout:', error);
+      // Continuar aunque falle el logout
       setUser(null);
       console.log('✅ Logout completado (forzado)');
       return { success: true };
@@ -292,10 +300,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (target.id === user.id) return;
     if (target.role === 'admin' || target.role === 'master_admin') return;
     setImpersonatedUser(target);
+    localStorage.setItem('falla_session_impersonated', target.id);
   };
 
   const stopImpersonation = () => {
     setImpersonatedUser(null);
+    localStorage.removeItem('falla_session_impersonated');
   };
 
   const effectiveUser = impersonatedUser ?? user;
