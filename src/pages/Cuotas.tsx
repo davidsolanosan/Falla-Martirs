@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
-import { CreditCard, Calendar, Ticket, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { CreditCard, Calendar, Ticket, Users, ChevronDown, ChevronUp, Beer } from 'lucide-react';
 
 export default function Cuotas() {
   const { t } = useTranslation();
-  const { families, users, categories, lotteryDates, events, eventRegistrations } = useSupabase();
+  const { families, users, categories, lotteryDates, events, eventRegistrations, qrTickets, qrProducts } = useSupabase();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -271,6 +271,18 @@ export default function Cuotas() {
     return familyEvents.reduce((total, event) => total + event.totalCost, 0);
   }, [familyEvents]);
 
+  // Consumiciones de barra validadas de la familia (se cobran después)
+  const familyBarTickets = useMemo(() => {
+    if (!userFamily?.id || !qrTickets?.length) return [];
+    const familyMembers = getFamilyMembers(userFamily.id);
+    const familyUserIds = familyMembers.map(member => member.id);
+    return qrTickets.filter(tk => tk.status === 'validated' && familyUserIds.includes(tk.user_id));
+  }, [userFamily, qrTickets, users]);
+
+  const barTotalCost = useMemo(() => {
+    return familyBarTickets.reduce((total, tk) => total + (tk.total_price || 0), 0);
+  }, [familyBarTickets]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -389,7 +401,7 @@ export default function Cuotas() {
       </div>
 
       {/* Total Payment Summary */}
-      {eventsTotalCost > 0 && (
+      {(eventsTotalCost > 0 || barTotalCost > 0) && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
           <div className="p-6 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('paymentSummary')}</h3>
@@ -400,16 +412,26 @@ export default function Cuotas() {
                   €{quota.annualCost.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600">{t('eventsCost')}</span>
-                <span className="font-semibold text-orange-600">
-                  €{eventsTotalCost.toFixed(2)}
-                </span>
-              </div>
+              {eventsTotalCost > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">{t('eventsCost')}</span>
+                  <span className="font-semibold text-orange-600">
+                    €{eventsTotalCost.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              {barTotalCost > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">{t('barConsumption')}</span>
+                  <span className="font-semibold text-orange-600">
+                    €{barTotalCost.toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-3 border-t-2 border-orange-200">
                 <span className="font-bold text-slate-800 text-lg">{t('totalToPay')}</span>
                 <span className="font-bold text-xl" style={{ color: '#464971' }}>
-                  €{(quota.annualCost + eventsTotalCost).toFixed(2)}
+                  €{(quota.annualCost + eventsTotalCost + barTotalCost).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -502,6 +524,76 @@ export default function Cuotas() {
                         <span className="font-bold text-lg text-[#464971]">
                           €{eventsTotalCost.toFixed(2)}
                         </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Barra Info */}
+      {familyBarTickets.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div
+            className="flex items-center justify-between cursor-pointer"
+            onClick={() => setExpandedSection(expandedSection === 'barra' ? null : 'barra')}
+          >
+            <h2 className="text-xl font-bold flex items-center gap-2" style={{ color: '#464971' }}>
+              <Beer className="w-5 h-5" />
+              {t('barConsumption')}
+            </h2>
+            <div className="flex items-center space-x-3">
+              <span className="bg-[#464971]/10 px-2 py-1 rounded-full text-xs font-medium text-[#464971]">
+                {familyBarTickets.length}
+              </span>
+              {expandedSection === 'barra' ? (
+                <ChevronUp className="w-5 h-5 text-slate-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-600" />
+              )}
+            </div>
+          </div>
+
+          {expandedSection === 'barra' && (
+            <div className="mt-6">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">{t('qrProductCol')}</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">{t('qrMemberCol')}</th>
+                      <th className="text-center py-3 px-4 font-medium text-slate-700">{t('qrQtyCol')}</th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">{t('qrDateCol')}</th>
+                      <th className="text-right py-3 px-4 font-medium text-slate-700">{t('totalCost')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {familyBarTickets.map((ticket, index) => {
+                      const product = qrProducts.find(p => p.id === ticket.product_id);
+                      const member = users.find(u => u.id === ticket.user_id);
+                      return (
+                        <tr key={ticket.id} className={`border-b ${index % 2 === 0 ? 'bg-slate-50' : 'bg-white'}`}>
+                          <td className="py-3 px-4 font-medium text-slate-900">{product?.name || '—'}</td>
+                          <td className="py-3 px-4 text-slate-600">{member ? `${member.name} ${member.surname}` : '—'}</td>
+                          <td className="py-3 px-4 text-center text-slate-900">{ticket.quantity}</td>
+                          <td className="py-3 px-4 text-sm text-slate-500">
+                            {new Date(ticket.validated_at || ticket.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-semibold text-orange-600">€{ticket.total_price.toFixed(2)}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-300">
+                      <td colSpan={4} className="py-3 px-4 font-bold text-slate-900">{t('total')}</td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="font-bold text-lg text-[#464971]">€{barTotalCost.toFixed(2)}</span>
                       </td>
                     </tr>
                   </tfoot>

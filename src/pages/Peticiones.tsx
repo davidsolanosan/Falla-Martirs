@@ -3,15 +3,16 @@ import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingCart, Plus, Minus, X, Search, Filter, User, History, Image as ImageIcon, Shirt, Award, Users, Package as PackageIcon } from 'lucide-react';
+import { Package, ShoppingCart, Plus, Minus, X, Search, Filter, User, History, Image as ImageIcon, Shirt, Award, Users, Package as PackageIcon, Beer } from 'lucide-react';
 import { appConfirm } from '../components/ui/AppFeedback';
+import BarraUsuario from '../components/barra/BarraUsuario';
 
 export default function Peticiones() {
   const { t } = useTranslation();
-  const { user, families } = useAuth();
-  const { petitionArticles, petitionCategories, petitions, createPetition } = useSupabase();
+  const { user } = useAuth();
+  const { petitionArticles, petitionCategories, petitions, createPetition, families } = useSupabase();
   
-  const [activeTab, setActiveTab] = useState<'catalog' | 'history'>('catalog');
+  const [activeTab, setActiveTab] = useState<'catalog' | 'history' | 'bar'>('catalog');
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
   const [selectedSection, setSelectedSection] = useState('Todas');
@@ -212,6 +213,17 @@ export default function Peticiones() {
               }`}
             >
               {t('myPetitions') || 'Mis Peticiones'} ({userPetitions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('bar')}
+              className={`flex-1 py-3 px-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'bar'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <Beer className="w-4 h-4" />
+              {t('qrBarTab') || 'Barra'}
             </button>
           </div>
 
@@ -474,6 +486,9 @@ export default function Peticiones() {
               )}
             </div>
           )}
+
+          {/* Barra Tab */}
+          {activeTab === 'bar' && <BarraUsuario />}
         </div>
 
         {/* Cart Sidebar */}

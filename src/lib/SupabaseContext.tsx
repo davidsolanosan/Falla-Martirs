@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, EventMealOption, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, CasalRental, CasalSettings, SectionStatus } from './supabase';
+import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, EventMealOption, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, QrProduct, QrTicket, CasalRental, CasalSettings, SectionStatus } from './supabase';
 import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
@@ -25,6 +25,8 @@ interface SupabaseContextType {
   casalSettings: CasalSettings[];
   sectionStatus: SectionStatus[];
   eventMealOptions: EventMealOption[];
+  qrProducts: QrProduct[];
+  qrTickets: QrTicket[];
   loading: boolean;
   error: string | null;
   
@@ -127,6 +129,16 @@ interface SupabaseContextType {
   loginUser: (email: string, password: string) => Promise<{user: User, isFirstLogin: boolean}>;
   changePassword: (userId: string, newPassword: string) => Promise<void>;
   initializeUserPasswords: () => Promise<void>;
+
+  // Barra QR: productos y tickets
+  createQrProduct: (product: Omit<QrProduct, 'id' | 'created_at' | 'updated_at'>) => Promise<QrProduct>;
+  updateQrProduct: (id: string, product: Partial<QrProduct>) => Promise<void>;
+  deleteQrProduct: (id: string) => Promise<void>;
+  createQrTicket: (ticket: Omit<QrTicket, 'id' | 'created_at' | 'updated_at' | 'status' | 'validated_at' | 'validated_by'>) => Promise<QrTicket>;
+  validateQrTicket: (ticketId: string, adminId: string) => Promise<void>;
+  cancelQrTicket: (ticketId: string) => Promise<void>;
+  refreshQrProducts: () => Promise<void>;
+  refreshQrTickets: () => Promise<void>;
 }
 
 export const SupabaseContext = createContext<SupabaseContextType | undefined>(undefined);
@@ -154,7 +166,9 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const [casalSettings, setCasalSettings] = useState<CasalSettings[]>([]);
   const [sectionStatus, setSectionStatus] = useState<SectionStatus[]>([]);
   const [eventMealOptions, setEventMealOptions] = useState<EventMealOption[]>([]);
-  
+  const [qrProducts, setQrProducts] = useState<QrProduct[]>([]);
+  const [qrTickets, setQrTickets] = useState<QrTicket[]>([]);
+
   // Banderas para evitar cargas múltiples
   const [isLoadingLotteryDates, setIsLoadingLotteryDates] = useState(false);
   const [isLoadingLotteryTickets, setIsLoadingLotteryTickets] = useState(false);
@@ -1756,6 +1770,109 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     await refreshEventMealOptions();
   };
 
+  // ========== Barra QR: productos y tickets ==========
+
+  const refreshQrProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('qr_products')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setQrProducts(data || []);
+    } catch (err) {
+      console.error('Error loading qr_products:', err);
+      setQrProducts([]);
+    }
+  };
+
+  const refreshQrTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('qr_tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setQrTickets(data || []);
+    } catch (err) {
+      console.error('Error loading qr_tickets:', err);
+      setQrTickets([]);
+    }
+  };
+
+  const createQrProduct = async (product: Omit<QrProduct, 'id' | 'created_at' | 'updated_at'>) => {
+    const { data, error } = await supabase
+      .from('qr_products')
+      .insert(product)
+      .select()
+      .single();
+
+    if (error) throw error;
+    await refreshQrProducts();
+    return data;
+  };
+
+  const updateQrProduct = async (id: string, product: Partial<QrProduct>) => {
+    const { error } = await supabase
+      .from('qr_products')
+      .update({ ...product, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+    await refreshQrProducts();
+  };
+
+  const deleteQrProduct = async (id: string) => {
+    const { error } = await supabase
+      .from('qr_products')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    await refreshQrProducts();
+  };
+
+  const createQrTicket = async (ticket: Omit<QrTicket, 'id' | 'created_at' | 'updated_at' | 'status' | 'validated_at' | 'validated_by'>) => {
+    const { data, error } = await supabase
+      .from('qr_tickets')
+      .insert({ ...ticket, status: 'pending' })
+      .select()
+      .single();
+
+    if (error) throw error;
+    await refreshQrTickets();
+    return data;
+  };
+
+  const validateQrTicket = async (ticketId: string, adminId: string) => {
+    const { error } = await supabase
+      .from('qr_tickets')
+      .update({
+        status: 'validated',
+        validated_by: adminId,
+        validated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', ticketId)
+      .eq('status', 'pending'); // doble check: solo si sigue pendiente
+
+    if (error) throw error;
+    // El estado final se confirma vía realtime/refresh
+    await refreshQrTickets();
+  };
+
+  const cancelQrTicket = async (ticketId: string) => {
+    const { error } = await supabase
+      .from('qr_tickets')
+      .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+      .eq('id', ticketId);
+
+    if (error) throw error;
+    await refreshQrTickets();
+  };
+
   const createCasalRental = async (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
@@ -1864,6 +1981,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
           refreshCasalSettings(), // AÑADIDO: cargar configuración de casal
           refreshSectionStatus(), // AÑADIDO: cargar estado de secciones
           refreshEventMealOptions(), // AÑADIDO: cargar opciones de menú de eventos
+          refreshQrProducts(), // AÑADIDO: productos de barra QR
+          refreshQrTickets(), // AÑADIDO: tickets QR
         ]);
         
         // Check current auth state - DESHABILITADO para evitar conflictos con AuthContext
@@ -1916,9 +2035,23 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     );
     */
 
+    // Suscripción en tiempo real a los tickets QR (barra):
+    // el admin ve tickets nuevos al instante y el fallero ve el check al validar
+    const qrChannel = supabase
+      .channel('qr_tickets_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_tickets' },
+        () => { refreshQrTickets(); })
+      .subscribe();
+
+    const qrProductsChannel = supabase
+      .channel('qr_products_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_products' },
+        () => { refreshQrProducts(); })
+      .subscribe();
+
     return () => {
-      // No hay subscription que limpiar - está deshabilitado
-      console.log('SupabaseContext: Auth listener deshabilitado');
+      supabase.removeChannel(qrChannel);
+      supabase.removeChannel(qrProductsChannel);
     };
   }, [hasLoadedInitialData]); // Añadir dependencia explícita
 
@@ -2024,6 +2157,17 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     createEventMealOption,
     updateEventMealOption,
     deleteEventMealOption,
+    // Barra QR
+    qrProducts,
+    qrTickets,
+    createQrProduct,
+    updateQrProduct,
+    deleteQrProduct,
+    createQrTicket,
+    validateQrTicket,
+    cancelQrTicket,
+    refreshQrProducts,
+    refreshQrTickets,
     // Casal functions
     createCasalRental,
     updateCasalRental,

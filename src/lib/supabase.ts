@@ -278,6 +278,33 @@ export interface PetitionPayment {
   created_at: string;
 }
 
+// Barra - Productos y tickets QR
+export interface QrProduct {
+  id: string;
+  name: string;
+  price: number;
+  is_active: boolean;
+  active_from?: string;
+  active_until?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QrTicket {
+  id: string;
+  product_id: string;
+  user_id: string;
+  family_id?: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  status: 'pending' | 'validated' | 'cancelled';
+  validated_by?: string | null;
+  validated_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Noticias
 export interface News {
   id: string;

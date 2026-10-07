@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
-import { Package, Plus, Edit2, Trash2, Eye, X, Check, AlertCircle, Upload, Image as ImageIcon, Shirt, Award, Users, Star, Heart, Gem, FileText, Calendar, Music, Camera, Home } from 'lucide-react';
+import { Package, Plus, Edit2, Trash2, Eye, X, Check, AlertCircle, Upload, Image as ImageIcon, Shirt, Award, Users, Star, Heart, Gem, FileText, Calendar, Music, Camera, Home, Beer } from 'lucide-react';
 import { appConfirm } from '../../components/ui/AppFeedback';
+import BarraAdmin from '../../components/barra/BarraAdmin';
 
 export default function PeticionesAdmin() {
   const { t } = useTranslation();
   const { petitionArticles, petitionCategories, petitions, createPetitionArticle, updatePetitionArticle, deletePetitionArticle, createPetitionCategory, updatePetitionCategory, deletePetitionCategory, refreshPetitionCategories, refreshPetitionArticles, updatePetition } = useSupabase();
   
-  const [activeTab, setActiveTab] = useState<'categories' | 'articles' | 'petitions'>('categories');
+  const [activeTab, setActiveTab] = useState<'categories' | 'articles' | 'petitions' | 'barra'>('categories');
   const [showArticleForm, setShowArticleForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [editingArticle, setEditingArticle] = useState(null);
@@ -313,6 +314,17 @@ export default function PeticionesAdmin() {
             >
               {t('petitions') || 'Peticiones'} ({petitions?.length || 0})
             </button>
+            <button
+              onClick={() => setActiveTab('barra')}
+              className={`flex-1 py-3 px-4 text-center font-medium transition-colors flex items-center justify-center gap-2 ${
+                activeTab === 'barra'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              <Beer className="w-4 h-4" />
+              {t('qrBarTab') || 'Barra QR'}
+            </button>
           </div>
 
         {/* Quick Actions for Articles */}
@@ -570,6 +582,9 @@ export default function PeticionesAdmin() {
               </div>
             </div>
           )}
+
+          {/* Barra QR Tab */}
+          {activeTab === 'barra' && <BarraAdmin />}
         </div>
 
         {/* Article Form Modal */}
