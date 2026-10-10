@@ -276,7 +276,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-50" style={{ backgroundColor: 'rgba(71, 85, 105, 0.4)' }} onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="fixed left-0 top-0 h-full w-64 bg-white bg-opacity-95 shadow-xl flex flex-col">
+          <div className="fixed left-0 top-0 h-full w-64 bg-white bg-opacity-95 shadow-xl flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold text-indigo-600">{t('appTitle')}</h2>
             </div>
