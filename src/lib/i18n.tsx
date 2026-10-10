@@ -1677,8 +1677,18 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const LANGUAGE_STORAGE_KEY = 'falla_language';
+
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('va'); // Default to Valencian
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return saved === 'es' || saved === 'va' ? saved : 'va'; // Default to Valencian
+  });
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  };
 
   const t = (key: TranslationKey): string => {
     const dict: Partial<Record<TranslationKey, string>> = translations[language];

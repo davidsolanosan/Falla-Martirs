@@ -81,14 +81,13 @@ const getNavItems = (role: string | undefined, t: any) => {
     });
   }
   
-  // Configuración de usuario (solo falleros; los admins la tienen en el submenú de Administración)
-  if (role === 'user') {
-    items.push({ 
-      name: t('navSettings'), 
-      path: '/configuracion', 
-      icon: Settings 
-    });
-  }
+  // Configuración de usuario (idioma + contraseña — para todos los roles;
+  // la de administración de la falla está en el submenú de Administración)
+  items.push({
+    name: t('navSettings'),
+    path: '/configuracion',
+    icon: Settings
+  });
   
   // Administración (solo para admin y master_admin)
   if (role === 'admin' || role === 'master_admin') {
@@ -222,16 +221,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           
           <div className="flex items-center space-x-2 mb-3">
             <Globe className="w-4 h-4 text-slate-400" />
-            <select 
-              value={language} 
+            <select
+              value={language}
               onChange={(e) => setLanguage(e.target.value as 'es' | 'va')}
               className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="va">🇪🇸 Valencià</option>
-              <option value="es">🇪🇸 Castellano</option>
+              <option value="va">Valencià</option>
+              <option value="es">Castellano</option>
             </select>
           </div>
-          
+
           <button
             onClick={() => logout()}
             className="w-full text-xs text-slate-600 hover:text-slate-900 font-medium px-2 py-1.5"
@@ -353,8 +352,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onChange={(e) => setLanguage(e.target.value as 'es' | 'va')}
                   className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="va">🇪🇸 Valencià</option>
-                  <option value="es">🇪🇸 Castellano</option>
+                  <option value="va">Valencià</option>
+                  <option value="es">Castellano</option>
                 </select>
               </div>
 
