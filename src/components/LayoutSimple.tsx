@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package, UserCog } from 'lucide-react';
+import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package, UserCog, Beer } from 'lucide-react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../lib/permissions';
@@ -106,6 +106,7 @@ const getNavItems = (role: string | undefined, t: any) => {
         { name: t('navAdminLottery'), path: '/administracion/loterias', icon: Ticket },
         { name: t('navAdminDocuments'), path: '/administracion/documentos', icon: FileText },
         { name: t('navAdminPetitions') || 'Peticiones', path: '/administracion/peticiones', icon: Package },
+        { name: t('navAdminBar') || 'Barra', path: '/administracion/barra', icon: Beer },
         { name: t('navAdminCasal') || 'Administrar Casal', path: '/administracion/casal', icon: Home },
         { name: t('navAdminSettings'), path: '/administracion/configuracion', icon: Settings }
       ]

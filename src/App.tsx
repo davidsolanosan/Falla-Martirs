@@ -30,6 +30,7 @@ import LoteriasAdmin from './pages/LoteriasAdmin';
 import DocumentosAdmin from './pages/administracion/DocumentosAdmin';
 import ConfiguracionAdmin from './pages/administracion/ConfiguracionAdmin';
 import PeticionesAdmin from './pages/administracion/PeticionesAdmin';
+import BarraAdminPage from './pages/administracion/BarraAdminPage';
 import CasalAdmin from './pages/administracion/CasalAdmin';
 import ActualizarNoticiasEventos from './pages/administracion/ActualizarNoticiasEventos';
 import ChangePassword from './pages/ChangePassword';
@@ -230,6 +231,14 @@ function AppWithAuth() {
                 <ProtectedRoute>
                   <Layout>
                     <PeticionesAdmin />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="/administracion/barra" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <BarraAdminPage />
                   </Layout>
                 </ProtectedRoute>
               } />

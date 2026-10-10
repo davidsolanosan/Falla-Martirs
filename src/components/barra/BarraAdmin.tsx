@@ -30,6 +30,8 @@ export default function BarraAdmin() {
   }, []);
 
   const [tab, setTab] = useState<'scan' | 'products' | 'tickets'>('scan');
+  const [filterUser, setFilterUser] = useState('');
+  const [filterDay, setFilterDay] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<QrProduct | null>(null);
   const [form, setForm] = useState({ name: '', price: '', is_active: false, active_from: '', active_until: '' });
@@ -45,10 +47,30 @@ export default function BarraAdmin() {
     [qrTickets]
   );
 
-  // Historial admin agrupado por día
+  // Historial admin agrupado por día, con filtros por usuario y fecha
+  const filteredTickets = useMemo(
+    () => qrTickets.filter(tk => {
+      if (filterUser && tk.user_id !== filterUser) return false;
+      if (filterDay) {
+        const d = new Date(tk.created_at);
+        const ticketDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (ticketDay !== filterDay) return false;
+      }
+      return true;
+    }),
+    [qrTickets, filterUser, filterDay]
+  );
+
+  const filteredTotal = useMemo(
+    () => filteredTickets
+      .filter(tk => tk.status === 'validated')
+      .reduce((sum, tk) => sum + tk.total_price, 0),
+    [filteredTickets]
+  );
+
   const ticketsByDay = useMemo(() => {
     const groups: { [day: string]: QrTicket[] } = {};
-    qrTickets.forEach(tk => {
+    filteredTickets.forEach(tk => {
       const day = new Date(tk.created_at).toLocaleDateString('es-ES', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
       });
@@ -56,7 +78,15 @@ export default function BarraAdmin() {
       groups[day].push(tk);
     });
     return Object.entries(groups);
-  }, [qrTickets]);
+  }, [filteredTickets]);
+
+  // Usuarios que tienen tickets, para el filtro
+  const usersWithTickets = useMemo(() => {
+    const ids = new Set(qrTickets.map(tk => tk.user_id));
+    return users
+      .filter(u => ids.has(u.id))
+      .sort((a, b) => `${a.name} ${a.surname}`.localeCompare(`${b.name} ${b.surname}`));
+  }, [qrTickets, users]);
 
   const getProduct = (id: string) => qrProducts.find(p => p.id === id);
   const getUser = (id: string) => users.find(u => u.id === id);
@@ -91,6 +121,8 @@ export default function BarraAdmin() {
 
   const onScanSuccess = (decoded: string) => {
     stopScanner();
+    // Feedback háptico en móviles: el admin siente el escaneo sin mirar
+    try { navigator.vibrate?.(150); } catch {}
     lookupTicket(decoded);
   };
 
@@ -103,7 +135,7 @@ export default function BarraAdmin() {
         scannerRef.current = scanner;
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 220, height: 220 } },
+          { fps: 10, qrbox: { width: 260, height: 260 } },
           onScanSuccess,
           () => {}
         );
@@ -302,15 +334,15 @@ export default function BarraAdmin() {
                     <div className="flex gap-3">
                       <button
                         onClick={handleValidate}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700"
+                        className="flex-1 flex items-center justify-center gap-2 py-4 rounded-xl font-bold text-lg text-white bg-green-600 hover:bg-green-700 active:scale-95 transition-transform"
                       >
-                        <CheckCircle className="w-5 h-5" /> {t('qrValidate')}
+                        <CheckCircle className="w-6 h-6" /> {t('qrValidate')}
                       </button>
                       <button
                         onClick={handleReject}
-                        className="px-4 py-3 rounded-xl font-medium text-red-600 border border-red-200 hover:bg-red-50"
+                        className="px-5 py-4 rounded-xl font-medium text-red-600 border-2 border-red-200 hover:bg-red-50 active:scale-95 transition-transform"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                       </button>
                     </div>
                   )}
@@ -419,6 +451,54 @@ export default function BarraAdmin() {
         {/* ======== TAB: Todos los tickets ======== */}
         {tab === 'tickets' && (
           <div className="space-y-6">
+            {/* Filtros: usuario y día */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">{t('qrFilterUser')}</label>
+                <select
+                  value={filterUser}
+                  onChange={e => setFilterUser(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white"
+                >
+                  <option value="">{t('qrAllUsers')}</option>
+                  {usersWithTickets.map(u => (
+                    <option key={u.id} value={u.id}>{u.name} {u.surname}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-slate-500 mb-1">{t('qrFilterDay')}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={filterDay}
+                    onChange={e => setFilterDay(e.target.value)}
+                    className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white"
+                  />
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      setFilterDay(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+                    }}
+                    className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap"
+                  >
+                    {t('qrToday')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {(filterUser || filterDay) && (
+              <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-4 py-2">
+                <p className="text-sm text-slate-600">
+                  {filteredTickets.length} {t('qrAllTickets').toLowerCase()}
+                </p>
+                <p className="text-sm font-semibold" style={{ color: '#464971' }}>
+                  {t('qrFilteredTotal')}: €{filteredTotal.toFixed(2)}
+                </p>
+              </div>
+            )}
+
             {ticketsByDay.length === 0 ? (
               <p className="text-slate-500 text-sm py-8 text-center">{t('qrNoTickets')}</p>
             ) : ticketsByDay.map(([day, tickets]) => (

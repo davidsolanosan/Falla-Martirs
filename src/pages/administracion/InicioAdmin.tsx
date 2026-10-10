@@ -3,7 +3,7 @@ import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { hasPermission } from '../../lib/permissions';
 import { Link } from 'react-router-dom';
-import { BarChart3, Users, TrendingUp, Calendar, CreditCard, FileText, Ticket, Settings, Euro, AlertCircle, CheckCircle, Clock, Target, Package } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, Calendar, CreditCard, FileText, Ticket, Settings, Euro, AlertCircle, CheckCircle, Clock, Target, Package, Beer } from 'lucide-react';
 
 export default function InicioAdmin() {
   const { t } = useTranslation();
@@ -119,6 +119,7 @@ export default function InicioAdmin() {
     { name: t('navAdminEvents'), path: '/administracion/eventos', icon: Calendar, count: 0 },
     { name: t('navAdminQuotas'), path: '/administracion/cuotas', icon: CreditCard, count: totalFamilies },
     { name: t('navAdminPetitions'), path: '/administracion/peticiones', icon: Package, count: petitionCategories?.length || 0 },
+    { name: t('navAdminBar'), path: '/administracion/barra', icon: Beer, count: 0 },
     { name: t('navAdminLottery'), path: '/administracion/loterias', icon: Ticket, count: 12 },
     { name: t('navAdminDocuments'), path: '/administracion/documentos', icon: FileText, count: 0 },
     { name: t('navAdminSettings'), path: '/administracion/configuracion', icon: Settings, count: 0 }
