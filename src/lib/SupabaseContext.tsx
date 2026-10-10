@@ -137,6 +137,7 @@ interface SupabaseContextType {
   createQrTicket: (ticket: Omit<QrTicket, 'id' | 'created_at' | 'updated_at' | 'status' | 'validated_at' | 'validated_by'>) => Promise<QrTicket>;
   validateQrTicket: (ticketId: string, adminId: string) => Promise<void>;
   cancelQrTicket: (ticketId: string) => Promise<void>;
+  getQrTicketById: (ticketId: string) => Promise<QrTicket | null>;
   refreshQrProducts: () => Promise<void>;
   refreshQrTickets: () => Promise<void>;
 }
@@ -1873,6 +1874,22 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     await refreshQrTickets();
   };
 
+  // Consulta directa a BD: el escáner no puede depender de que el
+  // realtime haya traído ya el ticket al estado local
+  const getQrTicketById = async (ticketId: string): Promise<QrTicket | null> => {
+    const { data, error } = await supabase
+      .from('qr_tickets')
+      .select('*')
+      .eq('id', ticketId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error buscando qr_ticket:', error);
+      return null;
+    }
+    return data;
+  };
+
   const createCasalRental = async (rental: Omit<CasalRental, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       const { data, error } = await supabase
@@ -2166,6 +2183,7 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     createQrTicket,
     validateQrTicket,
     cancelQrTicket,
+    getQrTicketById,
     refreshQrProducts,
     refreshQrTickets,
     // Casal functions

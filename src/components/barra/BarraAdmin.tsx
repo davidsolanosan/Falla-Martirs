@@ -16,7 +16,7 @@ export default function BarraAdmin() {
   const {
     qrProducts, qrTickets, users,
     createQrProduct, updateQrProduct, deleteQrProduct,
-    validateQrTicket, cancelQrTicket
+    validateQrTicket, cancelQrTicket, getQrTicketById, refreshQrTickets
   } = useSupabase();
 
   const [tab, setTab] = useState<'scan' | 'products' | 'tickets'>('scan');
@@ -66,14 +66,22 @@ export default function BarraAdmin() {
     return () => { stopScanner(); };
   }, []);
 
-  const onScanSuccess = (decoded: string) => {
-    const ticket = qrTickets.find(tk => tk.id === decoded.trim());
-    stopScanner();
+  const lookupTicket = async (rawId: string) => {
+    const id = rawId.trim();
+    // Primero estado local (rápido); si no, consulta directa a BD por si
+    // el realtime aún no ha traído el ticket
+    const ticket = qrTickets.find(tk => tk.id === id) || await getQrTicketById(id);
     if (!ticket) {
       appToast(t('qrTicketNotFound'), 'error');
       return;
     }
     setScannedTicket(ticket);
+    refreshQrTickets();
+  };
+
+  const onScanSuccess = (decoded: string) => {
+    stopScanner();
+    lookupTicket(decoded);
   };
 
   const startScanner = async () => {
@@ -97,14 +105,10 @@ export default function BarraAdmin() {
     }, 100);
   };
 
-  const lookupManual = () => {
-    const ticket = qrTickets.find(tk => tk.id === manualId.trim());
-    if (!ticket) {
-      appToast(t('qrTicketNotFound'), 'error');
-      return;
-    }
+  const lookupManual = async () => {
+    const id = manualId.trim();
     setManualId('');
-    setScannedTicket(ticket);
+    await lookupTicket(id);
   };
 
   const handleValidate = async () => {
