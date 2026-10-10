@@ -2053,18 +2053,44 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     */
 
     // Suscripción en tiempo real a los tickets QR (barra):
-    // el admin ve tickets nuevos al instante y el fallero ve el check al validar
-    const qrChannel = supabase
-      .channel('qr_tickets_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_tickets' },
-        () => { refreshQrTickets(); })
-      .subscribe();
+    // el admin ve tickets nuevos al instante y el fallero ve el check al validar.
+    // El callback de estado permite diagnosticar caídas del canal y re-suscribir.
+    const subscribeQrTickets = () => {
+      const channel = supabase
+        .channel('qr_tickets_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_tickets' },
+          () => { refreshQrTickets(); })
+        .subscribe((status, err) => {
+          console.log('[Realtime] qr_tickets:', status, err || '');
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setTimeout(() => {
+              supabase.removeChannel(channel);
+              subscribeQrTickets();
+            }, 3000);
+          }
+        });
+      return channel;
+    };
 
-    const qrProductsChannel = supabase
-      .channel('qr_products_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_products' },
-        () => { refreshQrProducts(); })
-      .subscribe();
+    const subscribeQrProducts = () => {
+      const channel = supabase
+        .channel('qr_products_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_products' },
+          () => { refreshQrProducts(); })
+        .subscribe((status, err) => {
+          console.log('[Realtime] qr_products:', status, err || '');
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            setTimeout(() => {
+              supabase.removeChannel(channel);
+              subscribeQrProducts();
+            }, 3000);
+          }
+        });
+      return channel;
+    };
+
+    const qrChannel = subscribeQrTickets();
+    const qrProductsChannel = subscribeQrProducts();
 
     return () => {
       supabase.removeChannel(qrChannel);

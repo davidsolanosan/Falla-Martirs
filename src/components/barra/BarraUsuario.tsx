@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from '../../lib/i18n';
 import { useSupabase } from '../../lib/SupabaseContext';
 import { useAuth } from '../../context/AuthContext';
@@ -19,7 +19,17 @@ export function isProductAvailable(p: QrProduct): boolean {
 export default function BarraUsuario() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { qrProducts, qrTickets, createQrTicket, cancelQrTicket } = useSupabase();
+  const { qrProducts, qrTickets, createQrTicket, cancelQrTicket, refreshQrTickets, refreshQrProducts } = useSupabase();
+
+  // Respaldo al realtime: mientras esta vista está abierta, refresca cada 5s
+  // por si el canal de tiempo real se cae (móvil, cambio de red, etc.)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshQrTickets();
+      refreshQrProducts();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [quantities, setQuantities] = useState<{ [productId: string]: number }>({});
   const [qrTicket, setQrTicket] = useState<QrTicket | null>(null);

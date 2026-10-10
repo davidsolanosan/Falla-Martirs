@@ -16,8 +16,18 @@ export default function BarraAdmin() {
   const {
     qrProducts, qrTickets, users,
     createQrProduct, updateQrProduct, deleteQrProduct,
-    validateQrTicket, cancelQrTicket, getQrTicketById, refreshQrTickets
+    validateQrTicket, cancelQrTicket, getQrTicketById, refreshQrTickets, refreshQrProducts
   } = useSupabase();
+
+  // Respaldo al realtime: mientras esta vista está abierta, refresca cada 5s
+  // por si el canal de tiempo real se cae (móvil, cambio de red, etc.)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshQrTickets();
+      refreshQrProducts();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const [tab, setTab] = useState<'scan' | 'products' | 'tickets'>('scan');
   const [showForm, setShowForm] = useState(false);
