@@ -2052,51 +2052,38 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     );
     */
 
-    // Suscripción en tiempo real a los tickets QR (barra):
-    // el admin ve tickets nuevos al instante y el fallero ve el check al validar.
-    // El callback de estado permite diagnosticar caídas del canal y re-suscribir.
-    const subscribeQrTickets = () => {
+  }, [hasLoadedInitialData]); // Añadir dependencia explícita
+
+  // Suscripción en tiempo real a las tablas QR (barra), en su propio efecto:
+  // si va dentro del efecto de carga, el cleanup lo mata cuando
+  // hasLoadedInitialData cambia — los canales morían antes de conectar.
+  // El callback de estado permite diagnosticar caídas y re-suscribir.
+  useEffect(() => {
+    const subscribeQrTable = (table: 'qr_tickets' | 'qr_products', refresh: () => Promise<void>) => {
       const channel = supabase
-        .channel('qr_tickets_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_tickets' },
-          () => { refreshQrTickets(); })
+        .channel(`${table}_realtime`)
+        .on('postgres_changes', { event: '*', schema: 'public', table },
+          () => { refresh(); })
         .subscribe((status, err) => {
-          console.log('[Realtime] qr_tickets:', status, err || '');
+          console.log(`[Realtime] ${table}:`, status, err || '');
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             setTimeout(() => {
               supabase.removeChannel(channel);
-              subscribeQrTickets();
+              subscribeQrTable(table, refresh);
             }, 3000);
           }
         });
       return channel;
     };
 
-    const subscribeQrProducts = () => {
-      const channel = supabase
-        .channel('qr_products_realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'qr_products' },
-          () => { refreshQrProducts(); })
-        .subscribe((status, err) => {
-          console.log('[Realtime] qr_products:', status, err || '');
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            setTimeout(() => {
-              supabase.removeChannel(channel);
-              subscribeQrProducts();
-            }, 3000);
-          }
-        });
-      return channel;
-    };
-
-    const qrChannel = subscribeQrTickets();
-    const qrProductsChannel = subscribeQrProducts();
+    const qrChannel = subscribeQrTable('qr_tickets', refreshQrTickets);
+    const qrProductsChannel = subscribeQrTable('qr_products', refreshQrProducts);
 
     return () => {
       supabase.removeChannel(qrChannel);
       supabase.removeChannel(qrProductsChannel);
     };
-  }, [hasLoadedInitialData]); // Añadir dependencia explícita
+  }, []);
 
   const value = {
     user,
