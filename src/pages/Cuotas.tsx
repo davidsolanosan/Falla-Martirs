@@ -38,10 +38,11 @@ export default function Cuotas() {
         console.log('Búsqueda por family_id:', family);
       }
       
-      // Método 2: por Familia (nombre)
-      if (!family && user.Familia) {
+      // Método 2: por Familia (nombre, campo legacy del CSV)
+      const legacyFamilia = (user as any).Familia;
+      if (!family && legacyFamilia) {
         family = families.find((f: any) => 
-          f.name.toLowerCase() === user.Familia.toLowerCase()
+          f.name.toLowerCase() === legacyFamilia.toLowerCase()
         );
         console.log('Búsqueda por nombre Familia:', family);
       }

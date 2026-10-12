@@ -78,6 +78,7 @@ export interface Category {
   quotaamount: number; // <-- Corregido: quotaamount en minúsculas
   min_age: number;
   max_age: number;
+  color?: string;
   created_at: string;
   updated_at: string;
 }
