@@ -14,8 +14,15 @@ export default function Configuracion() {
   // Registro completo del censo (AuthContext puede traer menos campos)
   const fullUser = users.find(u => u.id === user?.id);
   const myFamily = families.find(f => f.id === fullUser?.family_id);
-  const myCategory = categories.find(c => c.id === fullUser?.category_id);
   const familyMembers = myFamily ? users.filter(u => u.family_id === myFamily.id) : [];
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+
+  // Miembro cuyos datos personales se muestran: el seleccionado o el propio usuario
+  const selectedMember = (selectedMemberId
+    ? familyMembers.find(m => m.id === selectedMemberId)
+    : null) || fullUser;
+  const selectedCategory = categories.find(c => c.id === selectedMember?.category_id);
+
   const representatives = myFamily
     ? familyRepresentatives
         .filter(r => r.family_id === myFamily.id)
@@ -154,26 +161,6 @@ export default function Configuracion() {
           {t('myCensusData')}
         </h3>
 
-        {/* Datos personales */}
-        <div>
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-            <UserIcon className="w-4 h-4" /> {t('personalData')}
-          </p>
-          <div className="bg-slate-50 rounded-xl px-4">
-            <Row label={t('name')} value={fullUser ? `${fullUser.name} ${fullUser.surname}` : user?.name} />
-            <Row label={t('dni')} value={fullUser?.dni} />
-            <Row label={t('birthDate')} value={fullUser?.birth_year} />
-            <Row label={t('sex')} value={sexLabel(fullUser?.sexo)} />
-            <Row label={t('category')} value={myCategory?.name} />
-            <Row label={t('censusNumber')} value={fullUser?.numero_censo} />
-            <Row label={t('email')} value={fullUser?.email || user?.email} />
-            <Row label={t('phone')} value={fullUser?.phone || fullUser?.telefon_tutor} />
-            {fullUser?.cargo && <Row label={t('position')} value={fullUser.cargo} />}
-            {fullUser?.tutor && <Row label={t('legalTutor')} value={fullUser.tutor} />}
-            {fullUser?.tutor && <Row label={t('tutorPhone')} value={fullUser.telefon_tutor} />}
-          </div>
-        </div>
-
         {/* Unidad familiar */}
         {myFamily && (
           <div>
@@ -192,16 +179,20 @@ export default function Configuracion() {
               )}
             </div>
 
-            {/* Miembros de la familia */}
+            {/* Miembros de la familia — pulsables para ver sus datos */}
             <div className="mt-3 space-y-2">
               {familyMembers.map(member => {
                 const memberCategory = categories.find(c => c.id === member.category_id);
                 const isMe = member.id === user?.id;
+                const isSelected = member.id === selectedMember?.id;
                 return (
-                  <div
+                  <button
                     key={member.id}
-                    className={`flex items-center justify-between p-3 rounded-xl border ${
-                      isMe ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'
+                    onClick={() => setSelectedMemberId(member.id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-colors ${
+                      isSelected
+                        ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-300'
+                        : 'bg-white border-slate-100 hover:border-slate-300'
                     }`}
                   >
                     <div>
@@ -215,12 +206,38 @@ export default function Configuracion() {
                         {memberCategory?.name || '—'} · {member.birth_year || '—'}
                       </p>
                     </div>
-                  </div>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? 'text-indigo-500 rotate-90' : 'text-slate-300'}`} />
+                  </button>
                 );
               })}
             </div>
           </div>
         )}
+
+        {/* Datos personales del miembro seleccionado (o del propio usuario) */}
+        <div>
+          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <UserIcon className="w-4 h-4" /> {t('personalData')}
+            {selectedMember && selectedMember.id !== user?.id && (
+              <span className="normal-case font-medium text-slate-400">
+                — {selectedMember.name} {selectedMember.surname}
+              </span>
+            )}
+          </p>
+          <div className="bg-slate-50 rounded-xl px-4">
+            <Row label={t('name')} value={selectedMember ? `${selectedMember.name} ${selectedMember.surname}` : user?.name} />
+            <Row label={t('dni')} value={selectedMember?.dni} />
+            <Row label={t('birthDate')} value={selectedMember?.birth_year} />
+            <Row label={t('sex')} value={sexLabel(selectedMember?.sexo)} />
+            <Row label={t('category')} value={selectedCategory?.name} />
+            <Row label={t('censusNumber')} value={selectedMember?.numero_censo} />
+            <Row label={t('email')} value={selectedMember?.email || user?.email} />
+            <Row label={t('phone')} value={selectedMember?.phone || selectedMember?.telefon_tutor} />
+            {selectedMember?.cargo && <Row label={t('position')} value={selectedMember.cargo} />}
+            {selectedMember?.tutor && <Row label={t('legalTutor')} value={selectedMember.tutor} />}
+            {selectedMember?.tutor && <Row label={t('tutorPhone')} value={selectedMember.telefon_tutor} />}
+          </div>
+        </div>
 
         {/* Aviso solo lectura */}
         <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3">

@@ -195,7 +195,7 @@ export default function Inici() {
                 {t('configuracio')}
               </h3>
               <p className="text-sm text-slate-500">
-                Preferencias y ajustes
+                {t('configSubtitle')}
               </p>
             </div>
           </div>
