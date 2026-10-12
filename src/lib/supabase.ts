@@ -18,6 +18,7 @@ export interface User {
   role: 'user' | 'admin' | 'master_admin';
   family_id?: string; // Familia de cuotas (donde paga)
   event_family_id?: string; // Familia de eventos (donde apunta)
+  extras_family_id?: string; // Familia que paga los extras (eventos, barra). Si vacía, se usa event_family_id
   category_id?: string; // Referencia a la categoría del fallero
   // Campos adicionales del CSV
   codigo_jcf?: string;

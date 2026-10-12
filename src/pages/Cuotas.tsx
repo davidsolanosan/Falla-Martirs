@@ -80,13 +80,13 @@ export default function Cuotas() {
     return users.filter((u: any) => u.family_id === familyId);
   };
 
-  // Familia de eventos: a la que se imputan los "extras" (eventos, barra).
-  // Es event_family_id si el usuario lo tiene, si no su family_id.
+  // Familia de extras: a la que se imputan eventos y barra.
+  // Prioridad: extras_family_id > event_family_id > family_id.
   const fullUser = users.find((u: any) => u.id === user?.id);
-  const eventFamily = families.find((f: any) => f.id === (fullUser?.event_family_id || fullUser?.family_id));
+  const extrasFamily = families.find((f: any) => f.id === (fullUser?.extras_family_id || fullUser?.event_family_id || fullUser?.family_id));
 
-  const getEventFamilyMembers = (familyId: string) => {
-    return users.filter((u: any) => (u.event_family_id || u.family_id) === familyId);
+  const getExtrasFamilyMembers = (familyId: string) => {
+    return users.filter((u: any) => (u.extras_family_id || u.event_family_id || u.family_id) === familyId);
   };
 
   const getMemberCategory = (member: any) => {
@@ -239,12 +239,12 @@ export default function Cuotas() {
     };
   };
 
-  // Calcular eventos: se imputan a la FAMILIA DE EVENTOS
+  // Calcular eventos: se imputan a la FAMILIA DE EXTRAS
   const familyEvents = useMemo(() => {
-    if (!eventFamily?.id || !events?.length || !eventRegistrations?.length) return [];
+    if (!extrasFamily?.id || !events?.length || !eventRegistrations?.length) return [];
 
-    // Miembros que apuntan a eventos desde esta familia
-    const familyMembers = getEventFamilyMembers(eventFamily.id);
+    // Miembros cuyos extras paga esta familia
+    const familyMembers = getExtrasFamilyMembers(extrasFamily.id);
     const familyUserIds = familyMembers.map(member => member.id);
     
     // Obtener inscripciones de los miembros de la familia
@@ -273,20 +273,20 @@ export default function Cuotas() {
     });
     
     return Array.from(eventsMap.values());
-  }, [eventFamily, events, eventRegistrations, users]);
+  }, [extrasFamily, events, eventRegistrations, users]);
 
   // Calcular coste total de eventos
   const eventsTotalCost = useMemo(() => {
     return familyEvents.reduce((total, event) => total + event.totalCost, 0);
   }, [familyEvents]);
 
-  // Consumiciones de barra validadas: se imputan a la FAMILIA DE EVENTOS
+  // Consumiciones de barra validadas: se imputan a la FAMILIA DE EXTRAS
   const familyBarTickets = useMemo(() => {
-    if (!eventFamily?.id || !qrTickets?.length) return [];
-    const familyMembers = getEventFamilyMembers(eventFamily.id);
+    if (!extrasFamily?.id || !qrTickets?.length) return [];
+    const familyMembers = getExtrasFamilyMembers(extrasFamily.id);
     const familyUserIds = familyMembers.map(member => member.id);
     return qrTickets.filter(tk => tk.status === 'validated' && familyUserIds.includes(tk.user_id));
-  }, [eventFamily, qrTickets, users]);
+  }, [extrasFamily, qrTickets, users]);
 
   const barTotalCost = useMemo(() => {
     return familyBarTickets.reduce((total, tk) => total + (tk.total_price || 0), 0);

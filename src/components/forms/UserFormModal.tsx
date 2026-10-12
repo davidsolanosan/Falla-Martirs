@@ -37,7 +37,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
     codigo_postal: '',
     role: 'user',
     family_id: '',
-    event_family_id: ''
+    event_family_id: '',
+    extras_family_id: ''
   });
 
   // Initialize form with user data when editing
@@ -60,7 +61,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
         codigo_postal: userToEdit.codigo_postal || '',
         role: userToEdit.role || 'user',
         family_id: userToEdit.family_id || '',
-        event_family_id: userToEdit.event_family_id || ''
+        event_family_id: userToEdit.event_family_id || '',
+        extras_family_id: userToEdit.extras_family_id || ''
       });
     } else {
       setFormData({
@@ -80,7 +82,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
         codigo_postal: '',
         role: 'user',
         family_id: '',
-        event_family_id: ''
+        event_family_id: '',
+        extras_family_id: ''
       });
     }
   }, [userToEdit, isOpen]);
@@ -179,8 +182,8 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
             </div>
           </div>
 
-          {/* Tercera fila: Familia de Eventos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Tercera fila: Familia de Eventos y Familia de Extras */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Familia de Eventos</label>
               <select
@@ -194,21 +197,39 @@ export function UserFormModal({ isOpen, onClose, userToEdit }: UserFormModalProp
                 ))}
               </select>
               <p className="text-xs text-slate-500 mt-1">
-                Familia desde donde puede apuntar a eventos. Por defecto es la misma que la de cuotas.
+                Familia desde donde puede apuntar a eventos.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Familia que paga Extras</label>
+              <select
+                value={formData.extras_family_id || formData.event_family_id || formData.family_id}
+                onChange={(e) => setFormData({ ...formData, extras_family_id: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Misma que eventos...</option>
+                {families.sort((a, b) => a.name.localeCompare(b.name)).map(family => (
+                  <option key={family.id} value={family.id}>{family.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Quién paga eventos, barra... Por defecto la familia de eventos.
               </p>
             </div>
             <div className="flex items-end">
               <div className="text-sm text-slate-600">
-                {formData.event_family_id && formData.event_family_id !== formData.family_id ? (
+                {(formData.event_family_id && formData.event_family_id !== formData.family_id) ||
+                 (formData.extras_family_id && formData.extras_family_id !== (formData.event_family_id || formData.family_id)) ? (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="font-medium text-blue-800">⚠️ Configuración Especial</p>
                     <p className="text-blue-600">Cuotas: {families.find(f => f.id === formData.family_id)?.name}</p>
-                    <p className="text-blue-600">Eventos: {families.find(f => f.id === formData.event_family_id)?.name}</p>
+                    <p className="text-blue-600">Eventos: {families.find(f => f.id === (formData.event_family_id || formData.family_id))?.name}</p>
+                    <p className="text-blue-600">Extras: {families.find(f => f.id === (formData.extras_family_id || formData.event_family_id || formData.family_id))?.name}</p>
                   </div>
                 ) : (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="font-medium text-green-800">✅ Configuración Normal</p>
-                    <p className="text-green-600">Misma familia para cuotas y eventos</p>
+                    <p className="text-green-600">Misma familia para cuotas, eventos y extras</p>
                   </div>
                 )}
               </div>
