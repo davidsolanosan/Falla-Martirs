@@ -19,7 +19,11 @@ export function isProductAvailable(p: QrProduct): boolean {
 export default function BarraUsuario() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { qrProducts, qrTickets, createQrTicket, cancelQrTicket, refreshQrTickets, refreshQrProducts } = useSupabase();
+  const { qrProducts, qrTickets, createQrTicket, cancelQrTicket, refreshQrTickets, refreshQrProducts, users } = useSupabase();
+
+  // El ticket se imputa a la familia de eventos (extras), no a la de cuotas
+  const fullUser = users.find(u => u.id === user?.id);
+  const eventFamilyId = fullUser?.event_family_id || fullUser?.family_id || null;
 
   // Respaldo al realtime: mientras esta vista está abierta, refresca cada 5s
   // por si el canal de tiempo real se cae (móvil, cambio de red, etc.)
@@ -69,7 +73,7 @@ export default function BarraUsuario() {
       const ticket = await createQrTicket({
         product_id: product.id,
         user_id: user.id,
-        family_id: user.family_id || null,
+        family_id: eventFamilyId,
         quantity,
         unit_price: product.price,
         total_price: product.price * quantity

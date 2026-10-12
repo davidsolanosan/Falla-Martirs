@@ -80,6 +80,15 @@ export default function Cuotas() {
     return users.filter((u: any) => u.family_id === familyId);
   };
 
+  // Familia de eventos: a la que se imputan los "extras" (eventos, barra).
+  // Es event_family_id si el usuario lo tiene, si no su family_id.
+  const fullUser = users.find((u: any) => u.id === user?.id);
+  const eventFamily = families.find((f: any) => f.id === (fullUser?.event_family_id || fullUser?.family_id));
+
+  const getEventFamilyMembers = (familyId: string) => {
+    return users.filter((u: any) => (u.event_family_id || u.family_id) === familyId);
+  };
+
   const getMemberCategory = (member: any) => {
     // Primero intentar con category_id si existe
     if (member.category_id) {
@@ -230,12 +239,12 @@ export default function Cuotas() {
     };
   };
 
-  // Calcular eventos de la familia
+  // Calcular eventos: se imputan a la FAMILIA DE EVENTOS
   const familyEvents = useMemo(() => {
-    if (!userFamily?.id || !events?.length || !eventRegistrations?.length) return [];
-    
-    // Obtener miembros de la familia
-    const familyMembers = getFamilyMembers(userFamily.id);
+    if (!eventFamily?.id || !events?.length || !eventRegistrations?.length) return [];
+
+    // Miembros que apuntan a eventos desde esta familia
+    const familyMembers = getEventFamilyMembers(eventFamily.id);
     const familyUserIds = familyMembers.map(member => member.id);
     
     // Obtener inscripciones de los miembros de la familia
@@ -264,20 +273,20 @@ export default function Cuotas() {
     });
     
     return Array.from(eventsMap.values());
-  }, [userFamily, events, eventRegistrations, users]);
+  }, [eventFamily, events, eventRegistrations, users]);
 
   // Calcular coste total de eventos
   const eventsTotalCost = useMemo(() => {
     return familyEvents.reduce((total, event) => total + event.totalCost, 0);
   }, [familyEvents]);
 
-  // Consumiciones de barra validadas de la familia (se cobran después)
+  // Consumiciones de barra validadas: se imputan a la FAMILIA DE EVENTOS
   const familyBarTickets = useMemo(() => {
-    if (!userFamily?.id || !qrTickets?.length) return [];
-    const familyMembers = getFamilyMembers(userFamily.id);
+    if (!eventFamily?.id || !qrTickets?.length) return [];
+    const familyMembers = getEventFamilyMembers(eventFamily.id);
     const familyUserIds = familyMembers.map(member => member.id);
     return qrTickets.filter(tk => tk.status === 'validated' && familyUserIds.includes(tk.user_id));
-  }, [userFamily, qrTickets, users]);
+  }, [eventFamily, qrTickets, users]);
 
   const barTotalCost = useMemo(() => {
     return familyBarTickets.reduce((total, tk) => total + (tk.total_price || 0), 0);
