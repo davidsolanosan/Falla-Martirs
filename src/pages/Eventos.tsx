@@ -111,12 +111,13 @@ export default function Eventos() {
     console.log('🔍 Iniciando inscripción:', { memberIds, includesMeal, event });
     
     try {
-      // Obtener familia y miembros - usar el usuario completo de SupabaseContext
+      // Familia de eventos: event_family_id si está definido, si no family_id
       const fullUser = users.find(u => u.id === user?.id);
-      const userFamily = families.find(f => f.id === fullUser?.family_id);
-      
+      const eventFamilyId = fullUser?.event_family_id || fullUser?.family_id;
+      const userFamily = families.find(f => f.id === eventFamilyId);
+
       console.log('🔍 Usuario completo:', fullUser);
-      console.log('🔍 Familia:', userFamily);
+      console.log('🔍 Familia de eventos:', userFamily);
 
       // Consulta fresca de precios del evento (evita estado desactualizado del contexto)
       const eventPricesForEvent = await fetchEventPricesForEvent(event.id);
@@ -173,7 +174,8 @@ export default function Eventos() {
         await createEventRegistration({
           event_id: event.id,
           user_id: memberId,
-          family_id: userFamily?.id || '',
+          family_id: member?.family_id || userFamily?.id || '',
+          event_family_id: userFamily?.id || null,
           category_id: categoryId,
           includes_meal: includesMeal,
           meal_option_id: mealOptionId || null,
@@ -200,10 +202,13 @@ export default function Eventos() {
       meal_cost: event.meal_cost
     });
     
-    // Obtener familia y miembros - usar el usuario completo de SupabaseContext
+    // Familia de eventos: event_family_id si está definido, si no family_id.
+    // Los miembros son quienes apuntan a eventos desde esta familia
+    // (su event_family_id, o family_id si no lo tienen configurado).
     const fullUser = users.find(u => u.id === user?.id);
-    const userFamily = families.find(f => f.id === fullUser?.family_id);
-    const familyMembers = users.filter(u => u.family_id === userFamily?.id);
+    const eventFamilyId = fullUser?.event_family_id || fullUser?.family_id;
+    const userFamily = families.find(f => f.id === eventFamilyId);
+    const familyMembers = users.filter(u => (u.event_family_id || u.family_id) === userFamily?.id);
     
     // Inicializar con miembros ya inscritos
     const initiallyRegisteredMembers = familyMembers
