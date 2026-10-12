@@ -38,10 +38,21 @@
     <!-- Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
+        // Cuando un SW nuevo toma el control, recargar una vez para
+        // servir la versión nueva (evita bundles viejos cacheados)
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/service-worker.js')
             .then(registration => {
               console.log('Service Worker registrado:', registration);
+              // Forzar comprobación de updates en cada carga
+              registration.update();
             })
             .catch(error => {
               console.log('Error al registrar Service Worker:', error);
