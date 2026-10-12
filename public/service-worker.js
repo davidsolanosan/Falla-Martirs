@@ -1,64 +1,75 @@
-const CACHE_NAME = 'falla-martirs-v1';
-const urlsToCache = [
-  '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json'
-];
+const CACHE_NAME = 'falla-martirs-v2';
+const PRECACHE_URLS = ['/', '/manifest.json'];
 
-// Instalación del Service Worker
+// Instalación: precache tolerante a fallos (un 404 no aborta todo)
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Service Worker: Cache abierto');
-        return cache.addAll(urlsToCache);
-      })
+      .then(cache => Promise.allSettled(
+        PRECACHE_URLS.map(url => cache.add(url))
+      ))
   );
   self.skipWaiting();
 });
 
-// Activación del Service Worker
+// Activación: limpiar caches antiguos (incluido el v1 corrupto)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cache => {
           if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Limpiando cache antiguo');
+            console.log('Service Worker: Limpiando cache antiguo', cache);
             return caches.delete(cache);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Estrategia de Cache: Network First con fallback
 self.addEventListener('fetch', event => {
-  // Solo interceptar peticiones GET (evitar error con PATCH/POST/PUT/DELETE)
+  // Solo interceptar peticiones GET
   if (event.request.method !== 'GET') return;
 
+  const url = new URL(event.request.url);
+
+  // Solo recursos del propio origen: nunca cachear llamadas a
+  // Supabase u otras APIs externas (datos vivos, no estáticos)
+  if (url.origin !== self.location.origin) return;
+
+  // Assets hasheados de Vite (/assets/index-HASH.js): inmutables,
+  // cache-first — si están en cache son válidos para siempre
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Navegación y resto (incluye index.html): network first.
+  // Online siempre baja la versión nueva; el cache solo es fallback offline.
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Si la respuesta es válida, la cacheamos
         if (response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseClone);
-            });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
       })
       .catch(() => {
-        // Si falla la red, buscamos en cache
         return caches.match(event.request)
-          .then(response => {
-            return response || caches.match('/');
-          });
+          .then(response => response || caches.match('/'));
       })
   );
 });
