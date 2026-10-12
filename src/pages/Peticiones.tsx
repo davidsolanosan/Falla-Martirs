@@ -52,9 +52,12 @@ export default function Peticiones() {
     if (!article.available) return false;
     if (selectedSection !== 'Todas' && article.section !== selectedSection) return false;
     if (selectedCategory && selectedCategory !== 'Todas') {
-      // Filtrar por categoría usando petition_categories
-      const category = petitionCategories?.find(c => c.id === article.category_id);
-      if (!category || category.id !== selectedCategory) return false;
+      // Vinculación por category_id (nuevo). Fallback: por nombre de sección
+      // para artículos antiguos que se crearon sin category_id
+      const category = petitionCategories?.find(c => c.id === selectedCategory);
+      const matchesById = article.category_id === selectedCategory;
+      const matchesByName = !article.category_id && category && article.section === category.name;
+      if (!matchesById && !matchesByName) return false;
     }
     if (selectedGender !== 'Todas' && article.gender !== selectedGender) return false;
     if (searchTerm && !article.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -239,9 +242,9 @@ export default function Peticiones() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {/* All Categories Option */}
                     <button
-                      onClick={() => setSelectedCategory(null)}
+                      onClick={() => setSelectedCategory('Todas')}
                       className={`p-6 rounded-xl border-2 transition-all ${
-                        !selectedCategory
+                        selectedCategory === 'Todas'
                           ? 'border-blue-500 bg-blue-50 shadow-lg'
                           : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
                       }`}

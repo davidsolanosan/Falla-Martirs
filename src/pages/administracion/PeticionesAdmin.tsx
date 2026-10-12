@@ -91,10 +91,16 @@ export default function PeticionesAdmin() {
 
   const handleSaveArticle = async () => {
     try {
+      // Vincular el artículo a la categoría elegida: la sección guarda el
+      // nombre (legacy/compat) y category_id la referencia real que usa el
+      // catálogo del usuario para filtrar
+      const linkedCategory = petitionCategories?.find(c => c.name === articleForm.section);
+      const dataToSave = { ...articleForm, category_id: linkedCategory?.id || null };
+
       if (editingArticle) {
-        await updatePetitionArticle(editingArticle.id, articleForm);
+        await updatePetitionArticle(editingArticle.id, dataToSave);
       } else {
-        await createPetitionArticle(articleForm);
+        await createPetitionArticle(dataToSave);
       }
       setShowArticleForm(false);
       resetArticleForm();
