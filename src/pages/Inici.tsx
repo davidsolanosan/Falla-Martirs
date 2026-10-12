@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from '../lib/i18n';
-import { 
-  NewspaperIcon, 
-  CalendarIcon, 
-  CurrencyDollarIcon, 
-  TicketIcon, 
+import { useAuth } from '../context/AuthContext';
+import { useSupabase } from '../lib/SupabaseContext';
+import { supabase } from '../lib/supabase';
+import {
+  NewspaperIcon,
+  CalendarIcon,
+  CurrencyDollarIcon,
+  TicketIcon,
   CogIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
@@ -13,6 +16,29 @@ import {
 export default function Inici() {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { news, events } = useSupabase();
+  const [readNewsIds, setReadNewsIds] = useState<string[]>([]);
+
+  // Noticias leídas por el usuario (misma lógica que la página de Noticias)
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from('news_read')
+      .select('news_id')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        setReadNewsIds((data || []).map(item => item.news_id));
+      });
+  }, [user?.id]);
+
+  const unreadCount = news.filter(
+    n => n.status === 'published' && !readNewsIds.includes(n.id)
+  ).length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const upcomingCount = events.filter(e => new Date(e.event_date) >= today).length;
 
   const menuItems = [
     {
@@ -134,8 +160,8 @@ export default function Inici() {
                   {/* Indicador de navegación */}
                   <div className="flex items-center justify-center">
                     <span className="text-sm font-medium text-slate-500 mr-4" style={{ fontFamily: "'Madimi One', sans-serif" }}>
-                      {item.id === 'noticies' && '3 noves'}
-                      {item.id === 'esdeveniments' && '2 pròxims'}
+                      {item.id === 'noticies' && (unreadCount > 0 ? `${unreadCount} ${t('homeNewsUnread')}` : t('homeNewsAllRead'))}
+                      {item.id === 'esdeveniments' && (upcomingCount > 0 ? `${upcomingCount} ${t('homeEventsUpcoming')}` : t('homeEventsNone'))}
                       {item.id === 'quotes' && 'Veure estat'}
                       {item.id === 'loteria' && 'Activa'}
                     </span>
