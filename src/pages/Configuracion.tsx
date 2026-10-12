@@ -1,13 +1,37 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSupabase } from '../lib/SupabaseContext';
 import { useTranslation } from '../lib/i18n';
-import { Globe, Lock, Check, Eye, EyeOff, ChevronRight } from 'lucide-react';
+import { Globe, Lock, Check, Eye, EyeOff, ChevronRight, User as UserIcon, Users, Info, IdCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateInitialPassword, verifyPassword } from '../utils/authUtils';
 
 export default function Configuracion() {
   const { user, changePassword, isImpersonating } = useAuth();
+  const { users, families, categories, familyRepresentatives } = useSupabase();
   const { t, language, setLanguage } = useTranslation();
+
+  // Registro completo del censo (AuthContext puede traer menos campos)
+  const fullUser = users.find(u => u.id === user?.id);
+  const myFamily = families.find(f => f.id === fullUser?.family_id);
+  const myCategory = categories.find(c => c.id === fullUser?.category_id);
+  const familyMembers = myFamily ? users.filter(u => u.family_id === myFamily.id) : [];
+  const representatives = myFamily
+    ? familyRepresentatives
+        .filter(r => r.family_id === myFamily.id)
+        .map(r => users.find(u => u.id === r.user_id))
+        .filter(Boolean)
+    : [];
+
+  const sexLabel = (s?: string) =>
+    s === 'M' ? t('male') : s === 'F' ? t('female') : s || '—';
+
+  const Row = ({ label, value }: { label: string; value?: string | null }) => (
+    <div className="flex justify-between items-start gap-4 py-2 border-b border-slate-100 last:border-0">
+      <span className="text-sm text-slate-500 shrink-0">{label}</span>
+      <span className="text-sm font-medium text-slate-800 text-right">{value || '—'}</span>
+    </div>
+  );
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -122,6 +146,88 @@ export default function Configuracion() {
           {errorMessage}
         </div>
       )}
+
+      {/* Mis datos de censo (solo lectura) */}
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-6">
+        <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+          <IdCard className="w-5 h-5 mr-2 text-indigo-600" />
+          {t('myCensusData')}
+        </h3>
+
+        {/* Datos personales */}
+        <div>
+          <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <UserIcon className="w-4 h-4" /> {t('personalData')}
+          </p>
+          <div className="bg-slate-50 rounded-xl px-4">
+            <Row label={t('name')} value={fullUser ? `${fullUser.name} ${fullUser.surname}` : user?.name} />
+            <Row label={t('dni')} value={fullUser?.dni} />
+            <Row label={t('birthDate')} value={fullUser?.birth_year} />
+            <Row label={t('sex')} value={sexLabel(fullUser?.sexo)} />
+            <Row label={t('category')} value={myCategory?.name} />
+            <Row label={t('censusNumber')} value={fullUser?.numero_censo} />
+            <Row label={t('email')} value={fullUser?.email || user?.email} />
+            <Row label={t('phone')} value={fullUser?.phone || fullUser?.telefon_tutor} />
+            {fullUser?.cargo && <Row label={t('position')} value={fullUser.cargo} />}
+            {fullUser?.tutor && <Row label={t('legalTutor')} value={fullUser.tutor} />}
+            {fullUser?.tutor && <Row label={t('tutorPhone')} value={fullUser.telefon_tutor} />}
+          </div>
+        </div>
+
+        {/* Unidad familiar */}
+        {myFamily && (
+          <div>
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Users className="w-4 h-4" /> {t('familyUnit')}
+            </p>
+            <div className="bg-slate-50 rounded-xl px-4">
+              <Row label={t('family')} value={myFamily.name} />
+              <Row label={t('address')} value={myFamily.address} />
+              <Row label={t('phone')} value={myFamily.phone} />
+              {representatives.length > 0 && (
+                <Row
+                  label={t('representative')}
+                  value={representatives.map((r: any) => `${r.name} ${r.surname}`).join(', ')}
+                />
+              )}
+            </div>
+
+            {/* Miembros de la familia */}
+            <div className="mt-3 space-y-2">
+              {familyMembers.map(member => {
+                const memberCategory = categories.find(c => c.id === member.category_id);
+                const isMe = member.id === user?.id;
+                return (
+                  <div
+                    key={member.id}
+                    className={`flex items-center justify-between p-3 rounded-xl border ${
+                      isMe ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800 text-sm">
+                        {member.name} {member.surname}
+                        {isMe && (
+                          <span className="ml-2 text-xs font-semibold text-indigo-600">({t('youTag')})</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {memberCategory?.name || '—'} · {member.birth_year || '—'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Aviso solo lectura */}
+        <div className="flex items-start gap-2 text-xs text-slate-500 bg-slate-50 rounded-xl p-3">
+          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+          <p>{t('censusDataNotice')}</p>
+        </div>
+      </div>
 
       {/* Language Selection */}
       <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
