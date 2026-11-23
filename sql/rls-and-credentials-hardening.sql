@@ -259,5 +259,39 @@ GRANT EXECUTE ON FUNCTION public.app_reset_password_with_token(text, text) TO an
 GRANT EXECUTE ON FUNCTION public.app_set_initial_password(uuid, text) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.app_mark_first_login() TO anon, authenticated;
 
--- Eliminar la columna expuesta: ya no hay hashes accesibles
+-- Eliminar la columna expuesta: ya no hay hashes accesibles.
+-- Hay vistas legadas que dependen de ella: se recrean sin el hash
+-- (consultando user_credentials) y luego se elimina la columna.
+DROP VIEW IF EXISTS public.auth_stats;
+DROP VIEW IF EXISTS public.users_with_login_permission;
+
 ALTER TABLE public.users DROP COLUMN IF EXISTS password_hash;
+
+CREATE OR REPLACE VIEW public.users_with_login_permission AS
+SELECT
+    u.id,
+    u.name,
+    u.surname,
+    u.email,
+    u.dni,
+    u.birth_year,
+    'Desconocida' as category_name,
+    (c.password_hash IS NOT NULL) as has_password,
+    u.has_temp_password,
+    u.last_login,
+    u.login_attempts,
+    u.locked_until
+FROM public.users u
+LEFT JOIN public.user_credentials c ON c.user_id = u.id
+WHERE u.email IS NOT NULL
+    AND u.dni IS NOT NULL
+    AND u.birth_year IS NOT NULL;
+
+CREATE OR REPLACE VIEW public.auth_stats AS
+SELECT
+    COUNT(*) as total_users,
+    COUNT(CASE WHEN has_password THEN 1 END) as users_with_password,
+    COUNT(CASE WHEN has_temp_password = TRUE THEN 1 END) as users_with_temp_password,
+    COUNT(CASE WHEN last_login IS NOT NULL THEN 1 END) as active_users,
+    COUNT(CASE WHEN locked_until > NOW() THEN 1 END) as locked_users
+FROM public.users_with_login_permission;
