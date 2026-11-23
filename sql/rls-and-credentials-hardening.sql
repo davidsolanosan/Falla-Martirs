@@ -13,6 +13,22 @@
 -- ----------------------------------------------------------
 -- FASE 1: RLS + política permisiva en todas las tablas públicas
 -- ----------------------------------------------------------
+-- Primero eliminar TODAS las políticas existentes: hay políticas
+-- legadas que se referencian a sí mismas y, al activar RLS,
+-- causan "infinite recursion detected in policy" (42P17).
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  FOR r IN
+    SELECT policyname, tablename
+    FROM pg_policies
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;', r.policyname, r.tablename);
+  END LOOP;
+END $$;
+
 DO $$
 DECLARE
   r RECORD;
@@ -20,7 +36,6 @@ BEGIN
   FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', r.tablename);
-    EXECUTE format('DROP POLICY IF EXISTS app_allow_all ON public.%I;', r.tablename);
     EXECUTE format(
       'CREATE POLICY app_allow_all ON public.%I FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);',
       r.tablename
