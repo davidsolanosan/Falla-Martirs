@@ -74,13 +74,15 @@ ON CONFLICT (user_id) DO UPDATE SET
   updated_at = now();
 
 -- Helper interno: verifica contraseña contra hash bcrypt
--- (normaliza $2b$ -> $2a$ por compatibilidad con crypt())
+-- (normaliza $2b$ -> $2a$ por compatibilidad con crypt()).
+-- OJO: en Supabase pgcrypto vive en el esquema "extensions",
+-- hay que calificar extensions.crypt() o da 42883.
 CREATE OR REPLACE FUNCTION public.app_check_password(p_password text, p_hash text)
 RETURNS boolean
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  RETURN crypt(p_password, replace(p_hash, '$2b$', '$2a$')) = replace(p_hash, '$2b$', '$2a$');
+  RETURN extensions.crypt(p_password, replace(p_hash, '$2b$', '$2a$')) = replace(p_hash, '$2b$', '$2a$');
 END;
 $$;
 
