@@ -82,22 +82,21 @@ export default function ResetPassword() {
         throw new Error('Token no proporcionado');
       }
 
-      // Encriptar nueva contraseña
+      // Hashear en cliente; la validación del token + escritura de la
+      // credencial ocurren en servidor (RPC SECURITY DEFINER)
       const passwordHash = await hashPassword(newPassword);
 
-      // Actualizar usuario
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          password_hash: passwordHash,
-          has_temp_password: false,
-          password_reset_token: null,
-          password_reset_expires: null
-        })
-        .eq('password_reset_token', token);
+      const { data: ok, error: updateError } = await supabase
+        .rpc('app_reset_password_with_token', {
+          p_token: token,
+          p_new_hash: passwordHash
+        });
 
       if (updateError) {
         throw new Error(`Error actualizando contraseña: ${updateError.message}`);
+      }
+      if (!ok) {
+        throw new Error('El enlace no es válido o ha caducado');
       }
 
       setSuccess('¡Contraseña reseteada correctamente! Redirigiendo al login...');

@@ -4,7 +4,6 @@ import { useSupabase } from '../lib/SupabaseContext';
 import { useTranslation } from '../lib/i18n';
 import { Globe, Lock, Check, Eye, EyeOff, ChevronRight, User as UserIcon, Users, Info, IdCard } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { generateInitialPassword, verifyPassword } from '../utils/authUtils';
 
 export default function Configuracion() {
   const { user, changePassword, isImpersonating } = useAuth();
@@ -93,32 +92,14 @@ export default function Configuracion() {
     setErrorMessage('');
 
     try {
-      // Verificar la contraseña actual
-      const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('password_hash')
-        .eq('id', user?.id)
-        .single();
-
-      if (fetchError || !userData) {
-        showError(t('errorChangingPassword'));
-        return;
-      }
-
-      const isCurrentValid = userData.password_hash
-        ? await verifyPassword(passwordData.currentPassword, userData.password_hash)
-        : passwordData.currentPassword === generateInitialPassword(user?.dni || '', user?.birth_year || '');
-
-      if (!isCurrentValid) {
-        showError(t('currentPasswordIncorrect'));
-        return;
-      }
-
-      // Cambiar la contraseña usando el contexto de auth
-      const result = await changePassword(user!.id, passwordData.newPassword);
+      // Cambiar la contraseña: la verificación de la actual y la
+      // escritura ocurren en servidor (RPC app_change_password)
+      const result = await changePassword(user!.id, passwordData.currentPassword, passwordData.newPassword);
 
       if (!result.success) {
-        showError(result.error || t('errorChangingPassword'));
+        showError(result.error === 'La contraseña actual no es correcta'
+          ? t('currentPasswordIncorrect')
+          : (result.error || t('errorChangingPassword')));
         return;
       }
 

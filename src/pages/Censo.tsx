@@ -15,11 +15,11 @@ import { AutoFamilyGenerator } from '../components/forms/AutoFamilyGenerator';
 import { Search, Plus, Users, FileText, Calendar, Home, Settings, Download, Upload, Edit, UserCircle, Calculator, RefreshCcw, Trash, Users as UsersIcon, UserCog, KeyRound } from 'lucide-react';
 import { appConfirm, appToast } from '../components/ui/AppFeedback';
 import { useNavigate } from 'react-router-dom';
-import { Category } from '../lib/supabase';
+import { Category, supabase } from '../lib/supabase';
 
 export default function Censo() {
   const { families, categories, users, updateUser, deleteUser, updateFamily, deleteFamily, familyRepresentatives, setRepresentatives } = useSupabase(); // Datos de Supabase
-  const { user, realUser, startImpersonation } = useAuth(); // Usuario de AuthContext
+  const { user, realUser, startImpersonation, getSessionPassword } = useAuth(); // Usuario de AuthContext
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'usuarios' | 'familias'>('usuarios');
@@ -247,14 +247,26 @@ export default function Censo() {
   const handleResetPassword = async (target: any) => {
     if (!(await appConfirm(`${t('confirmResetPassword')} ${target.name} ${target.surname || ''}?`))) return;
 
+    const sessionPassword = getSessionPassword();
+    if (!sessionPassword) {
+      appToast('Sesión caducada: vuelve a iniciar sesión para restablecer contraseñas', 'error');
+      return;
+    }
+
     try {
-      await updateUser(target.id, {
-        password_hash: null,
-        first_login: true,
-        has_temp_password: true,
-        password_reset_token: null,
-        password_reset_expires: null
+      // Reseteo autorizado en servidor: verifica la contraseña del admin
+      // real y su rol, borra la credencial y marca first_login
+      const { data: ok, error } = await supabase.rpc('app_admin_reset_password', {
+        p_admin_id: realUser?.id || user?.id,
+        p_admin_password: sessionPassword,
+        p_target_id: target.id
       });
+
+      if (error) throw error;
+      if (!ok) {
+        appToast(t('errorResettingPassword'), 'error');
+        return;
+      }
       appToast(t('passwordResetSuccess'), 'success');
     } catch (error) {
       console.error('Error restableciendo contraseña:', error);

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, User, Family, Category, Quota, MonthlyLotteryPrice, LotteryDate, LotteryTicket, LotteryPrize, Event, EventPrice, EventRegistration, EventMealOption, News, PetitionCategory, PetitionArticle, Petition, PetitionPayment, QrProduct, QrTicket, CasalRental, CasalSettings, SectionStatus } from './supabase';
-import { generateInitialPassword, hashPassword, verifyPassword, validateEmail } from '../utils/authUtils';
+import { hashPassword, validateEmail } from '../utils/authUtils';
 
 interface SupabaseContextType {
   user: User | null;
@@ -127,7 +127,7 @@ interface SupabaseContextType {
   
   // Funciones de autenticación
   loginUser: (email: string, password: string) => Promise<{user: User, isFirstLogin: boolean}>;
-  changePassword: (userId: string, newPassword: string) => Promise<void>;
+  changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<void>;
   initializeUserPasswords: () => Promise<void>;
 
   // Barra QR: productos y tickets
@@ -1330,55 +1330,43 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Usuario no encontrado');
       }
 
-      // Generar contraseña esperada
-      const expectedPassword = generateInitialPassword(userData.dni || '', userData.birth_year || '');
-      
-      // Verificar si tiene password_hash (ya cambió contraseña)
-      if (userData.password_hash) {
-        // Usar contraseña hasheada
-        const isValidPassword = await verifyPassword(password, userData.password_hash);
-        if (!isValidPassword) {
-          throw new Error('Contraseña incorrecta');
-        }
-        
-        return {
-          user: userData,
-          isFirstLogin: false
-        };
-      } else {
-        // Usar contraseña inicial (DNI + año)
-        if (password !== expectedPassword) {
-          throw new Error('Contraseña incorrecta. Use: DNI + año de nacimiento');
-        }
-        
-        return {
-          user: userData,
-          isFirstLogin: true
-        };
+      // Verificación en servidor (RPC SECURITY DEFINER): credenciales
+      // en user_credentials o contraseña inicial (DNI+año)
+      const { data: isValidPassword, error: verifyError } = await supabase
+        .rpc('app_verify_password', {
+          p_user_id: userData.id,
+          p_password: password
+        });
+
+      if (verifyError) throw verifyError;
+      if (!isValidPassword) {
+        throw new Error('Contraseña incorrecta. Si es tu primer acceso: DNI + año de nacimiento');
       }
+
+      return {
+        user: userData,
+        isFirstLogin: userData.first_login === true
+      };
     } catch (err) {
       console.error('Error en login:', err);
       throw err;
     }
   };
 
-  const changePassword = async (userId: string, newPassword: string) => {
+  const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
     try {
-      // Hashear nueva contraseña
+      // Hashear en cliente; verificación + escritura en servidor (RPC)
       const passwordHash = await hashPassword(newPassword);
-      
-      // Actualizar usuario
-      const { error } = await supabase
-        .from('users')
-        .update({
-          password_hash: passwordHash,
-          first_login: false,
-          has_temp_password: false,
-          password_changed_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+
+      const { data: changed, error } = await supabase
+        .rpc('app_change_password', {
+          p_user_id: userId,
+          p_old_password: currentPassword,
+          p_new_hash: passwordHash
+        });
 
       if (error) throw error;
+      if (!changed) throw new Error('La contraseña actual no es correcta');
 
       // Actualizar estado local
       await refreshUsers();
@@ -1391,31 +1379,11 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
   const initializeUserPasswords = async () => {
     try {
       console.log('Inicializando contraseñas de usuarios...');
-      
-      // Obtener todos los usuarios sin password_hash
-      const { data: usersWithoutPassword, error } = await supabase
-        .from('users')
-        .select('*')
-        .is('password_hash', null);
 
+      // Marca first_login a usuarios sin credencial (RPC SECURITY DEFINER)
+      const { error } = await supabase.rpc('app_mark_first_login');
       if (error) throw error;
-      
-      console.log(`Usuarios sin contraseña: ${usersWithoutPassword?.length || 0}`);
-      
-      // Para cada usuario, establecer first_login = true
-      for (const user of usersWithoutPassword || []) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
-            first_login: true
-          })
-          .eq('id', user.id);
-          
-        if (updateError) {
-          console.error(`Error actualizando usuario ${user.id}:`, updateError);
-        }
-      }
-      
+
       console.log('Contraseñas inicializadas correctamente');
       await refreshUsers();
     } catch (err) {

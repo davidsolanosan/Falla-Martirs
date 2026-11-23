@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { validatePassword } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
+import { hashPassword } from '../../utils/authUtils';
 
 export function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -75,7 +77,6 @@ export function RegisterScreen() {
           name: formData.name,
           surname: formData.surname,
           role: 'user', // Rol por defecto
-          password_hash: await hashPassword(formData.password),
           has_temp_password: false
         });
 
@@ -83,6 +84,13 @@ export function RegisterScreen() {
         setError('Error al guardar datos del usuario: ' + dbError.message);
         return;
       }
+
+      // Guardar la credencial vía RPC (solo si el usuario no tiene una)
+      const passwordHash = await hashPassword(formData.password);
+      await supabase.rpc('app_set_initial_password', {
+        p_user_id: authData.user.id,
+        p_new_hash: passwordHash
+      });
 
       // 3. Iniciar sesión automáticamente
       const loginResult = await login(formData.email, formData.password);

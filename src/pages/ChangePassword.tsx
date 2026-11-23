@@ -40,7 +40,7 @@ export default function ChangePassword() {
     }
 
     try {
-      const result = await changePassword(currentPassword, newPassword);
+      const result = await changePassword(user!.id, currentPassword, newPassword);
       
       if (result.success) {
         setSuccess('¡Contraseña cambiada correctamente! Redirigiendo...');

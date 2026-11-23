@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../lib/supabase';
 import { Role } from '../lib/permissions';
-import { generateInitialPassword, verifyPassword, hashPassword } from '../utils/authUtils';
+import { hashPassword } from '../utils/authUtils';
 import { 
   generateResetToken, 
   validatePassword
@@ -33,8 +33,9 @@ export interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: AuthUser; isFirstLogin?: boolean }>;
   logout: () => Promise<{ success: boolean; error?: string }>;
-  changePassword: (userId: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (userId: string, currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  getSessionPassword: () => string | null;
   hasPermission: (permission: string) => boolean;
   canAccessRoute: (route: string) => boolean;
 }
@@ -173,21 +174,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Bypass para superusuario
         console.log('✅ Acceso superusuario');
       } else {
-        // Generar contraseña esperada
-        const expectedPassword = generateInitialPassword(userData.dni || '', userData.birth_year || '');
-        
-        // Verificar si tiene password_hash (ya cambió contraseña)
-        if (userData.password_hash) {
-          // Usar contraseña hasheada
-          const isValidPassword = await verifyPassword(password, userData.password_hash);
-          if (!isValidPassword) {
-            return { success: false, error: 'Contraseña incorrecta' };
-          }
-        } else {
-          // Usar contraseña inicial (DNI + año)
-          if (password !== expectedPassword) {
-            return { success: false, error: 'Contraseña incorrecta. Use: DNI + año de nacimiento' };
-          }
+        // Verificación en servidor (RPC SECURITY DEFINER): los hashes
+        // viven en user_credentials, fuera del alcance de la anon key.
+        // La función comprueba credencial propia o contraseña inicial (DNI+año).
+        const { data: isValidPassword, error: verifyError } = await supabase
+          .rpc('app_verify_password', {
+            p_user_id: userData.id,
+            p_password: password
+          });
+
+        if (verifyError) {
+          console.error('Error verificando contraseña:', verifyError);
+          return { success: false, error: 'Error verificando la contraseña' };
+        }
+        if (!isValidPassword) {
+          return { success: false, error: 'Contraseña incorrecta. Si es tu primer acceso: DNI + año de nacimiento' };
         }
       }
 
@@ -196,6 +197,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(authUser);
       localStorage.setItem('falla_session_user', authUser.id);
+      // Contraseña de sesión en memoria del navegador (se usa para
+      // autorizar operaciones sensibles como el reseteo admin)
+      sessionStorage.setItem('falla_session_pw', password);
 
       return { 
         success: true, 
@@ -210,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const changePassword = async (userId: string, newPassword: string) => {
+  const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
     setLoading(true);
 
     try {
@@ -219,22 +223,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: 'No se puede cambiar la contraseña de otro usuario' };
       }
       console.log('Cambiando contraseña para usuario:', userId);
-      
-      // Hashear nueva contraseña
+
+      // Hashear nueva contraseña en cliente; la verificación de la
+      // actual y la escritura ocurren en servidor (RPC SECURITY DEFINER)
       const passwordHash = await hashPassword(newPassword);
-      
-      // Actualizar usuario
-      const { error } = await supabase
-        .from('users')
-        .update({
-          password_hash: passwordHash,
-          first_login: false,
-          has_temp_password: false,
-          password_changed_at: new Date().toISOString()
-        })
-        .eq('id', userId);
+
+      const { data: changed, error } = await supabase
+        .rpc('app_change_password', {
+          p_user_id: userId,
+          p_old_password: currentPassword,
+          p_new_hash: passwordHash
+        });
 
       if (error) throw error;
+      if (!changed) {
+        return { success: false, error: 'La contraseña actual no es correcta' };
+      }
 
       console.log('✅ Contraseña cambiada correctamente');
 
@@ -265,6 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setImpersonatedUser(null);
       localStorage.removeItem('falla_session_user');
       localStorage.removeItem('falla_session_impersonated');
+      sessionStorage.removeItem('falla_session_pw');
       console.log('✅ Sesión cerrada exitosamente');
       return { success: true };
     } catch (error: any) {
@@ -329,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     logout,
     changePassword,
+    getSessionPassword: () => sessionStorage.getItem('falla_session_pw'),
     resetPassword,
     hasPermission: checkPermission,
     canAccessRoute: checkRouteAccess
