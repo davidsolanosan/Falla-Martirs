@@ -280,6 +280,35 @@ GRANT EXECUTE ON FUNCTION public.app_mark_first_login() TO anon, authenticated;
 DROP VIEW IF EXISTS public.auth_stats;
 DROP VIEW IF EXISTS public.users_with_login_permission;
 
+-- El trigger legado log_auth_attempt() lee NEW.password_hash:
+-- hay que recrearlo ANTES de eliminar la columna o cualquier
+-- UPDATE a users fallará con "record new has no field password_hash"
+CREATE OR REPLACE FUNCTION public.log_auth_attempt()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        -- Si se actualizó el last_login, registrar login exitoso
+        IF NEW.last_login IS NOT NULL AND OLD.last_login IS DISTINCT FROM NEW.last_login THEN
+            INSERT INTO auth_logs (user_id, action, success)
+            VALUES (NEW.id, 'login', TRUE);
+
+            -- Resetear intentos fallidos
+            UPDATE public.users
+            SET login_attempts = 0, locked_until = NULL
+            WHERE id = NEW.id;
+        END IF;
+
+        -- Si se cambió la contraseña (ahora se detecta por password_changed_at)
+        IF NEW.password_changed_at IS NOT NULL AND OLD.password_changed_at IS DISTINCT FROM NEW.password_changed_at THEN
+            INSERT INTO auth_logs (user_id, action, success)
+            VALUES (NEW.id, 'password_change', TRUE);
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 ALTER TABLE public.users DROP COLUMN IF EXISTS password_hash;
 
 CREATE OR REPLACE VIEW public.users_with_login_permission AS
