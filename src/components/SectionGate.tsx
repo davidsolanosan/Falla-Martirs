@@ -1,8 +1,9 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '../lib/i18n';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
-import { Hammer, EyeOff } from 'lucide-react';
+import { Hammer, EyeOff, ArrowLeft } from 'lucide-react';
 
 interface SectionGateProps {
   section: string;
@@ -37,6 +38,13 @@ export default function SectionGate({ section, children }: SectionGateProps) {
           <p className="text-slate-600">
             {t('underConstructionMessage')}
           </p>
+          <Link
+            to="/"
+            className="mt-6 inline-flex items-center gap-2 bg-[#464971] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#373a5a] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            {t('backToHome')}
+          </Link>
         </div>
       </div>
     );
