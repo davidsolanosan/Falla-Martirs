@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package, UserCog, Beer } from 'lucide-react';
+import { Home, Users, CreditCard, Ticket, CalendarDays, FileText, Settings, Menu, X, Globe, Shield, ChevronDown, ChevronRight, Plus, Package, UserCog, Beer, ArrowLeft } from 'lucide-react';
 import { useSupabase } from '../lib/SupabaseContext';
 import { useAuth } from '../context/AuthContext';
 import { hasPermission } from '../lib/permissions';
@@ -260,6 +260,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div className="max-w-[1600px] w-full mx-auto p-4 md:p-8">
+          {location.pathname !== '/' && (
+            <button
+              onClick={() => (location.key === 'default' ? navigate('/') : navigate(-1))}
+              className="mb-4 inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {t('back')}
+            </button>
+          )}
           {children}
         </div>
       </main>
